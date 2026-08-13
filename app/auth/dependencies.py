@@ -1,22 +1,19 @@
-import token
-
-from fastapi import Depends, HTTPException,status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials,OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
-
+from sqlalchemy.orm import Session
 
 from database import get_db
-
-
-SECRET_KEY = "your_secret_key"
-ALGORITHM = "HS256"
+from .utils import SECRET_KEY, ALGORITHM
+from .models import User
 
 
 security = HTTPBearer()
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
 ):
 
     try:
@@ -34,16 +31,22 @@ def get_current_user(
                 detail="Invalid authentication token"
             )
 
-        return user_id
-
-
-    except JWTError as e:
-        print("JWTError:", e)
-
+    except JWTError:
         raise HTTPException(
             status_code=401,
             detail="Invalid authentication token"
         )
+
+    db_user = db.query(User).filter(User.user_id == user_id).first()
+
+    if db_user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="User no longer exists"
+        )
+
+    return db_user
+
 
 # 🔒 Admin only
 def require_admin(current_user = Depends(get_current_user)):
@@ -66,4 +69,4 @@ def require_staff(current_user = Depends(get_current_user)):
             detail="Not authorized"
         )
 
-    return current_user    
+    return current_user

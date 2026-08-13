@@ -9,17 +9,17 @@ class User(Base):
     user_id = Column(Integer, primary_key=True, index=True)
 
     first_name = Column(
-        String(50),
+        String(100),
         nullable=False
     )
 
     last_name = Column(
-        String(50),
+        String(100),
         nullable=False
     )
 
     email = Column(
-        String(100),
+        String(150),
         unique=True,
         nullable=False
     )
@@ -30,7 +30,7 @@ class User(Base):
     )
 
     role = Column(
-        String(20),
+        String(50),
         default="staff"
     )
 

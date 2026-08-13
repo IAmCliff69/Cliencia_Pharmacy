@@ -17,6 +17,11 @@ import crud
 # -----------------------------
 # CREATE DATABASE TABLES
 # -----------------------------
+# Note: table creation is now also managed by Alembic migrations.
+# This call is harmless (create_all skips tables that already exist)
+# and is kept as a safety net for a totally fresh database, but any
+# schema CHANGES from here on should go through an Alembic migration,
+# not by editing models.py alone.
 models.Base.metadata.create_all(bind=engine)
 
 
@@ -49,7 +54,7 @@ def home():
 # =========================================================
 
 # ✅ CREATE → STAFF + ADMIN
-@app.post("/medicines/", response_model=schemas.MedicineResponse, status_code=201)
+@app.post("/medicines/", response_model=schemas.MedicineWithStockResponse, status_code=201)
 def create_medicine(
     medicine: schemas.MedicineCreate,
     db: Session = Depends(get_db),
@@ -60,11 +65,19 @@ def create_medicine(
     if isinstance(result, dict) and "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
 
+    crud.create_audit_log(
+        db,
+        user_id=current_user.user_id,
+        action="CREATE",
+        table="medicines",
+        record_id=result.medicine_id
+    )
+
     return result
 
 
 # ✅ READ → STAFF + ADMIN
-@app.get("/medicines/", response_model=list[schemas.MedicineResponse])
+@app.get("/medicines/", response_model=list[schemas.MedicineWithStockResponse])
 def get_medicines(
     db: Session = Depends(get_db),
     current_user = Depends(require_staff)
@@ -72,8 +85,20 @@ def get_medicines(
     return crud.get_medicines(db)
 
 
+# ✅ LOW STOCK → STAFF + ADMIN
+# NOTE: this route must be declared BEFORE /medicines/{medicine_id}
+# otherwise FastAPI will try to parse "low-stock" as an int medicine_id
+# and return a 422 error instead of matching this route.
+@app.get("/medicines/low-stock", response_model=list[schemas.MedicineWithStockResponse])
+def get_low_stock_medicines(
+    db: Session = Depends(get_db),
+    current_user = Depends(require_staff)
+):
+    return crud.get_low_stock_medicines(db)
+
+
 # ✅ READ ONE → STAFF + ADMIN
-@app.get("/medicines/{medicine_id}", response_model=schemas.MedicineResponse)
+@app.get("/medicines/{medicine_id}", response_model=schemas.MedicineWithStockResponse)
 def get_medicine(
     medicine_id: int,
     db: Session = Depends(get_db),
@@ -100,6 +125,40 @@ def update_medicine(
     if isinstance(result, dict) and "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
 
+    crud.create_audit_log(
+        db,
+        user_id=current_user.user_id,
+        action="UPDATE",
+        table="medicines",
+        record_id=result.medicine_id
+    )
+
+    return result
+
+
+# ✅ ADJUST STOCK → STAFF + ADMIN
+# For day-to-day restocking or dispensing without needing the full
+# update form. Positive change = restock, negative change = dispense/sell.
+@app.patch("/medicines/{medicine_id}/stock", response_model=schemas.MedicineWithStockResponse)
+def adjust_medicine_stock(
+    medicine_id: int,
+    change: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_staff)
+):
+    result = crud.adjust_stock(db, medicine_id, change)
+
+    if isinstance(result, dict) and "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+
+    crud.create_audit_log(
+        db,
+        user_id=current_user.user_id,
+        action=f"STOCK_ADJUST({change:+d})",
+        table="medicines",
+        record_id=result.medicine_id
+    )
+
     return result
 
 
@@ -115,6 +174,14 @@ def delete_medicine(
     if isinstance(result, dict) and "error" in result:
         raise HTTPException(status_code=404, detail=result["error"])
 
+    crud.create_audit_log(
+        db,
+        user_id=current_user.user_id,
+        action="DELETE",
+        table="medicines",
+        record_id=medicine_id
+    )
+
     return {"message": "Deleted successfully"}
 
 
@@ -129,7 +196,20 @@ def create_category(
     db: Session = Depends(get_db),
     current_user = Depends(require_admin)
 ):
-    return crud.create_category(db, category)
+    result = crud.create_category(db, category)
+
+    if isinstance(result, dict) and "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+
+    crud.create_audit_log(
+        db,
+        user_id=current_user.user_id,
+        action="CREATE",
+        table="categories",
+        record_id=result.category_id
+    )
+
+    return result
 
 
 # ✅ READ → STAFF + ADMIN
@@ -139,6 +219,55 @@ def get_categories(
     current_user = Depends(require_staff)
 ):
     return crud.get_categories(db)
+
+
+# 🔒 UPDATE → ADMIN ONLY
+@app.put("/categories/{category_id}", response_model=schemas.CategoryResponse)
+def update_category(
+    category_id: int,
+    updated_data: schemas.CategoryCreate,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin)
+):
+    result = crud.update_category(db, category_id, updated_data)
+
+    if isinstance(result, dict) and "error" in result:
+        status_code = 404 if "not found" in result["error"] else 400
+        raise HTTPException(status_code=status_code, detail=result["error"])
+
+    crud.create_audit_log(
+        db,
+        user_id=current_user.user_id,
+        action="UPDATE",
+        table="categories",
+        record_id=result.category_id
+    )
+
+    return result
+
+
+# 🔒 DELETE → ADMIN ONLY
+@app.delete("/categories/{category_id}", status_code=204)
+def delete_category(
+    category_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin)
+):
+    result = crud.delete_category(db, category_id)
+
+    if isinstance(result, dict) and "error" in result:
+        status_code = 404 if "not found" in result["error"] else 400
+        raise HTTPException(status_code=status_code, detail=result["error"])
+
+    crud.create_audit_log(
+        db,
+        user_id=current_user.user_id,
+        action="DELETE",
+        table="categories",
+        record_id=category_id
+    )
+
+    return {"message": "Deleted successfully"}
 
 
 # =========================================================
@@ -152,7 +281,17 @@ def create_supplier(
     db: Session = Depends(get_db),
     current_user = Depends(require_admin)
 ):
-    return crud.create_supplier(db, supplier)
+    result = crud.create_supplier(db, supplier)
+
+    crud.create_audit_log(
+        db,
+        user_id=current_user.user_id,
+        action="CREATE",
+        table="suppliers",
+        record_id=result.supplier_id
+    )
+
+    return result
 
 
 # ✅ READ → STAFF + ADMIN
@@ -162,3 +301,107 @@ def get_suppliers(
     current_user = Depends(require_staff)
 ):
     return crud.get_suppliers(db)
+
+
+# 🔒 UPDATE → ADMIN ONLY
+@app.put("/suppliers/{supplier_id}", response_model=schemas.SupplierResponse)
+def update_supplier(
+    supplier_id: int,
+    updated_data: schemas.SupplierCreate,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin)
+):
+    result = crud.update_supplier(db, supplier_id, updated_data)
+
+    if isinstance(result, dict) and "error" in result:
+        status_code = 404 if "not found" in result["error"] else 400
+        raise HTTPException(status_code=status_code, detail=result["error"])
+
+    crud.create_audit_log(
+        db,
+        user_id=current_user.user_id,
+        action="UPDATE",
+        table="suppliers",
+        record_id=result.supplier_id
+    )
+
+    return result
+
+
+# 🔒 DELETE → ADMIN ONLY
+@app.delete("/suppliers/{supplier_id}", status_code=204)
+def delete_supplier(
+    supplier_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin)
+):
+    result = crud.delete_supplier(db, supplier_id)
+
+    if isinstance(result, dict) and "error" in result:
+        status_code = 404 if "not found" in result["error"] else 400
+        raise HTTPException(status_code=status_code, detail=result["error"])
+
+    crud.create_audit_log(
+        db,
+        user_id=current_user.user_id,
+        action="DELETE",
+        table="suppliers",
+        record_id=supplier_id
+    )
+
+    return {"message": "Deleted successfully"}
+
+
+# =========================================================
+# 🔒 SALE ROUTES (POS)
+# =========================================================
+
+# ✅ CREATE → STAFF + ADMIN
+# Prices are always taken from the medicine's current unit_price on
+# the server, never from the client, and stock is validated for every
+# item before anything is written -- a sale either fully succeeds or
+# fails cleanly with nothing partially applied.
+@app.post("/sales/", response_model=schemas.SaleResponse, status_code=201)
+def create_sale(
+    sale: schemas.SaleCreate,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_staff)
+):
+    result = crud.create_sale(db, sale, current_user.user_id)
+
+    if isinstance(result, dict) and "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+
+    crud.create_audit_log(
+        db,
+        user_id=current_user.user_id,
+        action="CREATE",
+        table="sales",
+        record_id=result.sale_id
+    )
+
+    return result
+
+
+# ✅ READ → STAFF + ADMIN
+@app.get("/sales/", response_model=list[schemas.SaleResponse])
+def get_sales(
+    db: Session = Depends(get_db),
+    current_user = Depends(require_staff)
+):
+    return crud.get_sales(db)
+
+
+# ✅ READ ONE → STAFF + ADMIN
+@app.get("/sales/{sale_id}", response_model=schemas.SaleResponse)
+def get_sale(
+    sale_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_staff)
+):
+    sale = crud.get_sale_by_id(db, sale_id)
+
+    if not sale:
+        raise HTTPException(status_code=404, detail="Sale not found")
+
+    return sale

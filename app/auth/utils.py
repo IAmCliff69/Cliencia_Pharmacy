@@ -1,12 +1,19 @@
+import os
+from dotenv import load_dotenv
 from passlib.context import CryptContext
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, timezone
 
+load_dotenv()
 
 # JWT Configuration
-SECRET_KEY = "your_secret_key"
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 2
+
+if not SECRET_KEY:
+    raise RuntimeError("JWT_SECRET_KEY is not set. Add it to your .env file.")
+
 
 
 # Password hashing configuration
@@ -59,6 +66,7 @@ def create_token(data: dict):
     to_encode.update({
         "exp": expire
     })
+
 
     return jwt.encode(
         to_encode,
