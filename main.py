@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Query
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import date
@@ -34,6 +35,26 @@ app = FastAPI(
     title="ClienciaPharm API",
     description="Pharmacy Inventory Management System API",
     version="1.0.0"
+)
+
+
+# -----------------------------
+# CORS CONFIGURATION
+# -----------------------------
+# Allows the React (Vite) frontend, running on a different port during
+# development, to make requests to this API. Without this, the browser
+# blocks the requests before they even reach FastAPI.
+origins = [
+    "http://localhost:5173",   # Vite dev server default
+    "http://127.0.0.1:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
