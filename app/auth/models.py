@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from database import Base
 from datetime import datetime
 
@@ -32,6 +32,12 @@ class User(Base):
     role = Column(
         String(50),
         default="staff"
+    )
+
+    is_active = Column(
+        Boolean,
+        default=True,
+        nullable=False
     )
 
     created_at = Column(

@@ -37,6 +37,8 @@ def get_current_user(
             detail="Invalid authentication token"
         )
 
+    # Fetch the actual user so downstream dependencies (require_admin,
+    # require_staff) can check current_user.role
     db_user = db.query(User).filter(User.user_id == user_id).first()
 
     if db_user is None:
@@ -45,8 +47,16 @@ def get_current_user(
             detail="User no longer exists"
         )
 
-    return db_user
+    # Checked here (not just at login) so deactivation takes effect
+    # immediately, even for a token that was issued before the
+    # account was deactivated.
+    if not db_user.is_active:
+        raise HTTPException(
+            status_code=401,
+            detail="This account has been deactivated"
+        )
 
+    return db_user
 
 # 🔒 Admin only
 def require_admin(current_user = Depends(get_current_user)):

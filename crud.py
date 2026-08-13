@@ -1,5 +1,7 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
+from datetime import date, datetime, timedelta
 from models import Medicine, Category, Supplier, AuditLog, Inventory, Sale, SaleItem
 
 
@@ -47,8 +49,26 @@ def create_medicine(db: Session, medicine):
     return new_medicine
 
 
-def get_medicines(db: Session):
-    return db.query(Medicine).options(joinedload(Medicine.inventory)).all()
+def get_medicines(
+    db: Session,
+    name: str = None,
+    category_id: int = None,
+    supplier_id: int = None,
+    skip: int = 0,
+    limit: int = 20
+):
+    query = db.query(Medicine).options(joinedload(Medicine.inventory))
+
+    if name:
+        query = query.filter(Medicine.medicine_name.ilike(f"%{name}%"))
+
+    if category_id:
+        query = query.filter(Medicine.category_id == category_id)
+
+    if supplier_id:
+        query = query.filter(Medicine.supplier_id == supplier_id)
+
+    return query.offset(skip).limit(limit).all()
 
 
 def get_low_stock_medicines(db: Session):
@@ -57,6 +77,29 @@ def get_low_stock_medicines(db: Session):
         .join(Inventory, Medicine.medicine_id == Inventory.medicine_id)
         .options(joinedload(Medicine.inventory))
         .filter(Inventory.quantity_available <= Inventory.minimum_stock_level)
+        .all()
+    )
+
+
+def get_expiring_medicines(db: Session, days: int = 30):
+    cutoff = date.today() + timedelta(days=days)
+
+    return (
+        db.query(Medicine)
+        .options(joinedload(Medicine.inventory))
+        .filter(
+            Medicine.expiry_date >= date.today(),
+            Medicine.expiry_date <= cutoff
+        )
+        .all()
+    )
+
+
+def get_expired_medicines(db: Session):
+    return (
+        db.query(Medicine)
+        .options(joinedload(Medicine.inventory))
+        .filter(Medicine.expiry_date < date.today())
         .all()
     )
 
@@ -112,6 +155,15 @@ def delete_medicine(db: Session, medicine_id: int):
 
     if not medicine:
         return {"error": "Medicine not found"}
+
+    sale_history_count = db.query(SaleItem).filter(
+        SaleItem.medicine_id == medicine_id
+    ).count()
+
+    if sale_history_count > 0:
+        return {
+            "error": f"Cannot delete: this medicine appears in {sale_history_count} sale record(s)"
+        }
 
     # Remove the linked inventory row first (FK would otherwise block this)
     inventory_row = db.query(Inventory).filter(
@@ -391,3 +443,92 @@ def get_sale_by_id(db: Session, sale_id: int):
         .filter(Sale.sale_id == sale_id)
         .first()
     )
+
+
+def void_sale(db: Session, sale_id: int):
+
+    sale = (
+        db.query(Sale)
+        .options(joinedload(Sale.items))
+        .filter(Sale.sale_id == sale_id)
+        .first()
+    )
+
+    if not sale:
+        return {"error": "Sale not found"}
+
+    if sale.is_voided:
+        return {"error": "Sale is already voided"}
+
+    # Restore inventory for every item in this sale
+    for item in sale.items:
+        inventory_row = db.query(Inventory).filter(
+            Inventory.medicine_id == item.medicine_id
+        ).first()
+
+        if inventory_row:
+            inventory_row.quantity_available += item.quantity
+
+    sale.is_voided = True
+    sale.voided_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(sale)
+
+    return sale
+
+
+# -----------------------------
+# REPORTING
+# -----------------------------
+
+def get_sales_summary(db: Session, start_date: date = None, end_date: date = None):
+
+    query = db.query(
+        func.count(Sale.sale_id).label("total_sales"),
+        func.coalesce(func.sum(Sale.total_amount), 0).label("total_revenue")
+    ).filter(Sale.is_voided == False)  # noqa: E712
+
+    if start_date:
+        query = query.filter(Sale.sale_date >= start_date)
+
+    if end_date:
+        query = query.filter(Sale.sale_date < end_date + timedelta(days=1))
+
+    result = query.one()
+
+    return {
+        "start_date": start_date,
+        "end_date": end_date,
+        "total_sales": result.total_sales or 0,
+        "total_revenue": float(result.total_revenue or 0)
+    }
+
+
+def get_top_medicines(db: Session, limit: int = 10):
+
+    results = (
+        db.query(
+            SaleItem.medicine_id,
+            Medicine.medicine_name,
+            func.sum(SaleItem.quantity).label("total_quantity_sold"),
+            func.sum(SaleItem.quantity * SaleItem.price).label("total_revenue")
+        )
+        .join(Medicine, Medicine.medicine_id == SaleItem.medicine_id)
+        .join(Sale, Sale.sale_id == SaleItem.sale_id)
+        .filter(Sale.is_voided == False)  # noqa: E712
+        .group_by(SaleItem.medicine_id, Medicine.medicine_name)
+        .order_by(func.sum(SaleItem.quantity).desc())
+        .limit(limit)
+        .all()
+    )
+
+    return [
+        {
+            "medicine_id": r.medicine_id,
+            "medicine_name": r.medicine_name,
+            "total_quantity_sold": int(r.total_quantity_sold),
+            "total_revenue": float(r.total_revenue)
+        }
+        for r in results
+    ]

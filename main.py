@@ -1,5 +1,7 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+from typing import Optional
+from datetime import date
 from database import engine, get_db
 
 # ✅ Import auth router
@@ -77,24 +79,48 @@ def create_medicine(
 
 
 # ✅ READ → STAFF + ADMIN
+# Supports optional search/filter (name, category_id, supplier_id)
+# and pagination (skip, limit).
 @app.get("/medicines/", response_model=list[schemas.MedicineWithStockResponse])
 def get_medicines(
+    name: Optional[str] = None,
+    category_id: Optional[int] = None,
+    supplier_id: Optional[int] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user = Depends(require_staff)
 ):
-    return crud.get_medicines(db)
+    return crud.get_medicines(db, name, category_id, supplier_id, skip, limit)
 
 
-# ✅ LOW STOCK → STAFF + ADMIN
-# NOTE: this route must be declared BEFORE /medicines/{medicine_id}
-# otherwise FastAPI will try to parse "low-stock" as an int medicine_id
-# and return a 422 error instead of matching this route.
+# ✅ LOW STOCK / EXPIRY → STAFF + ADMIN
+# NOTE: these routes must be declared BEFORE /medicines/{medicine_id}
+# otherwise FastAPI will try to parse the path segment as an int
+# medicine_id and return a 422 error instead of matching these routes.
 @app.get("/medicines/low-stock", response_model=list[schemas.MedicineWithStockResponse])
 def get_low_stock_medicines(
     db: Session = Depends(get_db),
     current_user = Depends(require_staff)
 ):
     return crud.get_low_stock_medicines(db)
+
+
+@app.get("/medicines/expiring-soon", response_model=list[schemas.MedicineWithStockResponse])
+def get_expiring_medicines(
+    days: int = Query(30, ge=1, description="Medicines expiring within this many days"),
+    db: Session = Depends(get_db),
+    current_user = Depends(require_staff)
+):
+    return crud.get_expiring_medicines(db, days)
+
+
+@app.get("/medicines/expired", response_model=list[schemas.MedicineWithStockResponse])
+def get_expired_medicines(
+    db: Session = Depends(get_db),
+    current_user = Depends(require_staff)
+):
+    return crud.get_expired_medicines(db)
 
 
 # ✅ READ ONE → STAFF + ADMIN
@@ -405,3 +431,53 @@ def get_sale(
         raise HTTPException(status_code=404, detail="Sale not found")
 
     return sale
+
+
+# 🔒 VOID → ADMIN ONLY
+# Voiding is a financially sensitive action, so it's restricted to
+# admins even though creating a sale is open to staff. Restores stock
+# for every item and marks the sale as voided rather than deleting it,
+# preserving the record for audit purposes.
+@app.patch("/sales/{sale_id}/void", response_model=schemas.SaleResponse)
+def void_sale(
+    sale_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin)
+):
+    result = crud.void_sale(db, sale_id)
+
+    if isinstance(result, dict) and "error" in result:
+        status_code = 404 if "not found" in result["error"] else 400
+        raise HTTPException(status_code=status_code, detail=result["error"])
+
+    crud.create_audit_log(
+        db,
+        user_id=current_user.user_id,
+        action="VOID",
+        table="sales",
+        record_id=result.sale_id
+    )
+
+    return result
+
+
+# =========================================================
+# 🔒 REPORTING ROUTES
+# =========================================================
+
+# ✅ SALES SUMMARY → STAFF + ADMIN
+# Optional start_date/end_date (YYYY-MM-DD) narrow the window;
+# omitting both reports across all-time sales. Voided sales are
+# excluded from totals. Includes a top-10 best-selling medicines
+# breakdown by quantity sold.
+@app.get("/reports/sales-summary", response_model=schemas.SalesSummaryResponse)
+def get_sales_summary(
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_staff)
+):
+    summary = crud.get_sales_summary(db, start_date, end_date)
+    summary["top_medicines"] = crud.get_top_medicines(db)
+
+    return summary

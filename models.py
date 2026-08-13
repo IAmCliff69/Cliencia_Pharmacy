@@ -1,7 +1,8 @@
-from sqlalchemy import Column, Integer, String, Float, Date, DateTime, ForeignKey, Text, Numeric
+from sqlalchemy import Column, Integer, String, Float, Date, DateTime, ForeignKey, Text, Numeric, Boolean
 from sqlalchemy.orm import relationship
 from database import Base
 from datetime import datetime
+
 
 
 class Medicine(Base):
@@ -112,9 +113,10 @@ class Sale(Base):
     customer_name = Column(String(150), nullable=True)
     sale_date = Column(DateTime, default=datetime.utcnow)
     total_amount = Column(Numeric(10, 2))
+    is_voided = Column(Boolean, default=False, nullable=False)
+    voided_at = Column(DateTime, nullable=True)
 
     items = relationship("SaleItem", back_populates="sale")
-
 
 class SaleItem(Base):
     __tablename__ = "sale_items"

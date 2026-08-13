@@ -119,7 +119,28 @@ class SaleResponse(BaseModel):
     customer_name: Optional[str] = None
     sale_date: datetime
     total_amount: float
+    is_voided: bool
+    voided_at: Optional[datetime] = None
     items: list[SaleItemResponse] = []
 
     class Config:
-        from_attributes = True    
+        from_attributes = True
+
+
+# -----------------------------
+# Reporting Schemas
+# -----------------------------
+
+class TopMedicineResponse(BaseModel):
+    medicine_id: int
+    medicine_name: str
+    total_quantity_sold: int
+    total_revenue: float
+
+
+class SalesSummaryResponse(BaseModel):
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    total_sales: int
+    total_revenue: float
+    top_medicines: list[TopMedicineResponse] = []

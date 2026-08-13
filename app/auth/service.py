@@ -71,6 +71,10 @@ def login_user(
         return None
 
 
+    # Account has been deactivated
+    if not db_user.is_active:
+        return "inactive"
+
 
     # Create JWT token
     token = utils.create_token(
