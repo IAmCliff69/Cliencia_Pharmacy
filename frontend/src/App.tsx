@@ -4,6 +4,14 @@ import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import AppLayout from './components/layout/AppLayout'
 import Categories from './pages/Categories'
+import Suppliers from './pages/Suppliers'
+import Medicines from './pages/Medicines'
+import Sales from './pages/Sales'
+import POS from './pages/POS'
+import Reports from './pages/Reports'
+import Users from './pages/Users'
+import ProtectedRoute from './components/ProtectedRoute'
+
 
 function App() {
   return (
@@ -22,6 +30,19 @@ function App() {
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
       <Route path="/categories" element={<Categories />} />
+      <Route path="/suppliers" element={<Suppliers />} />
+      <Route path="/medicines" element={<Medicines />} />
+      <Route path="/pos" element={<POS />} />
+      <Route path="/sales" element={<Sales />} />
+      <Route path="/reports" element={<Reports />} />
+      <Route
+        path="/users"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <Users />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   )
 }

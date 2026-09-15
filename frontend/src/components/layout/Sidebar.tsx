@@ -1,6 +1,5 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-
 interface NavItem {
   label: string;
   to: string;

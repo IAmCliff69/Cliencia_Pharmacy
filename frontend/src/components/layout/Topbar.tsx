@@ -2,7 +2,6 @@ import { useAuth } from "../../context/AuthContext";
 
 function Topbar() {
   const { user, logout } = useAuth();
-
   return (
     <header className="h-16 bg-surface border-b border-border flex items-center justify-end px-6 sticky top-0 z-10">
       <div className="flex items-center gap-4">
