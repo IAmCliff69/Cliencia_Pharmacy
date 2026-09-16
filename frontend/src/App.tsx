@@ -11,7 +11,7 @@ import POS from './pages/POS'
 import Reports from './pages/Reports'
 import Users from './pages/Users'
 import ProtectedRoute from './components/ProtectedRoute'
-
+import Shifts from './pages/Shifts'
 
 function App() {
   return (
@@ -21,28 +21,25 @@ function App() {
 
       <Route element={<AppLayout />}>
         <Route path="/dashboard" element={<Dashboard />} />
-        {/* Medicines, Categories, Suppliers, POS, Sales, Reports,
-            Users routes get added here as we build each page in
-            Phases 4-6 — they'll all automatically get the
-            sidebar/topbar shell for free via this nested route. */}
+        <Route path="/categories" element={<Categories />} />
+        <Route path="/suppliers" element={<Suppliers />} />
+        <Route path="/medicines" element={<Medicines />} />
+        <Route path="/pos" element={<POS />} />
+        <Route path="/sales" element={<Sales />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/shifts" element={<Shifts />} />
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <Users />
+            </ProtectedRoute>
+          }
+        />
       </Route>
 
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
-      <Route path="/categories" element={<Categories />} />
-      <Route path="/suppliers" element={<Suppliers />} />
-      <Route path="/medicines" element={<Medicines />} />
-      <Route path="/pos" element={<POS />} />
-      <Route path="/sales" element={<Sales />} />
-      <Route path="/reports" element={<Reports />} />
-      <Route
-        path="/users"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <Users />
-          </ProtectedRoute>
-        }
-      />
     </Routes>
   )
 }

@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
+import ShiftBar from "./Shiftbar";
 import ProtectedRoute from "../ProtectedRoute";
 
 function AppLayout() {
@@ -10,6 +11,7 @@ function AppLayout() {
         <Sidebar />
         <div className="flex-1 min-w-0">
           <Topbar />
+          <ShiftBar />
           <main className="p-6">
             <Outlet />
           </main>

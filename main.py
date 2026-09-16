@@ -5,6 +5,7 @@ from typing import Optional
 from datetime import date
 from database import engine, get_db
 
+
 # ✅ Import auth router
 from app.auth.routes import router as auth_router
 
@@ -481,6 +482,77 @@ def void_sale(
 
     return result
 
+# =========================================================
+# 🔒 SHIFT / SESSION ROUTES
+# =========================================================
+
+# ✅ CHECK ACTIVE SHIFT → STAFF + ADMIN
+# Used by the frontend to know if the current user has an
+# open shift before allowing POS access.
+@app.get("/shifts/active", response_model=schemas.ShiftResponse)
+def get_active_shift(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_staff)
+):
+    shift = crud.get_active_shift(db, current_user.user_id)
+    if not shift:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No active shift found"
+        )
+    return shift
+
+
+# ✅ OPEN SHIFT → STAFF + ADMIN
+@app.post("/shifts/open", response_model=schemas.ShiftResponse)
+def open_shift(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_staff)
+):
+    result = crud.open_shift(db, current_user.user_id)
+    if isinstance(result, dict) and "error" in result:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result["error"]
+        )
+    return result
+
+
+# ✅ CLOSE SHIFT → STAFF + ADMIN
+@app.patch("/shifts/close", response_model=schemas.ShiftSummaryResponse)
+def close_shift(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_staff)
+):
+    shift = crud.close_shift(db, current_user.user_id)
+    if isinstance(shift, dict) and "error" in shift:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=shift["error"]
+        )
+    return crud.get_shift_summary(db, shift)
+
+
+# ✅ MY SHIFT HISTORY → STAFF + ADMIN
+# Returns all of the current user's shifts with sales summaries.
+@app.get("/shifts/my", response_model=list[schemas.ShiftSummaryResponse])
+def get_my_shifts(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_staff)
+):
+    shifts = crud.get_my_shifts(db, current_user.user_id)
+    return [crud.get_shift_summary(db, s) for s in shifts]
+
+
+# ✅ ALL SHIFTS → ADMIN ONLY
+# Admin sees every shift from every user with summaries.
+@app.get("/shifts/", response_model=list[schemas.ShiftSummaryResponse])
+def get_all_shifts(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_admin)
+):
+    shifts = crud.get_all_shifts(db)
+    return [crud.get_shift_summary(db, s) for s in shifts]
 
 # =========================================================
 # 🔒 REPORTING ROUTES

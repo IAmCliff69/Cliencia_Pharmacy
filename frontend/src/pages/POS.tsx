@@ -4,7 +4,6 @@ import { getMedicines } from "../api/medicines";
 import { createSale } from "../api/sales";
 import type { MedicineWithStockResponse } from "../types/medicine";
 import type { SaleCreate, SaleResponse } from "../types/sale";
-
 // -----------------------------
 // Types
 // -----------------------------

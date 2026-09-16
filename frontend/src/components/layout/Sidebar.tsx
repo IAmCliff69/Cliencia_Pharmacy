@@ -13,6 +13,7 @@ const navItems: NavItem[] = [
   { label: "Suppliers", to: "/suppliers" },
   { label: "Point of Sale", to: "/pos" },
   { label: "Sales History", to: "/sales" },
+  { label: "My Shifts", to: "/shifts" },
   { label: "Reports", to: "/reports" },
   { label: "Users", to: "/users", adminOnly: true },
 ];

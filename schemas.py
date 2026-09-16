@@ -144,3 +144,30 @@ class SalesSummaryResponse(BaseModel):
     total_sales: int
     total_revenue: float
     top_medicines: list[TopMedicineResponse] = []
+
+# -----------------------------
+# Shift / Session Schemas
+# -----------------------------
+
+class ShiftResponse(BaseModel):
+    shift_id: int
+    user_id: int
+    opened_at: datetime
+    closed_at: Optional[datetime] = None
+    status: str
+
+    class Config:
+        from_attributes = True
+
+
+class ShiftSummaryResponse(BaseModel):
+    shift_id: int
+    user_id: int
+    opened_at: datetime
+    closed_at: Optional[datetime] = None
+    status: str
+    total_sales: int
+    total_revenue: float
+
+    class Config:
+        from_attributes = True    

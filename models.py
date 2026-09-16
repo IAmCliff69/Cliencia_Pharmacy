@@ -130,6 +130,17 @@ class SaleItem(Base):
     sale = relationship("Sale", back_populates="items")
     medicine = relationship("Medicine")
 
+class Shift(Base):
+    __tablename__ = "shifts"
+
+    shift_id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
+    opened_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    closed_at = Column(DateTime, nullable=True)
+    status = Column(String(10), default="open", nullable=False)  # "open" | "closed"
+
+    user = relationship("User", backref="shifts")    
+
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"

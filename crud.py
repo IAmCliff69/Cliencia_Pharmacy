@@ -2,8 +2,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 from datetime import date, datetime, timedelta
-from models import Medicine, Category, Supplier, AuditLog, Inventory, Sale, SaleItem
-
+from models import Medicine, Category, Supplier, AuditLog, Inventory, Sale, SaleItem, Shift
 
 # -----------------------------
 # MEDICINE CRUD
@@ -532,3 +531,95 @@ def get_top_medicines(db: Session, limit: int = 10):
         }
         for r in results
     ]
+
+# -----------------------------
+# SHIFT / SESSION CRUD
+# -----------------------------
+
+def get_active_shift(db: Session, user_id: int):
+    """Returns the currently open shift for a user, or None."""
+    return (
+        db.query(Shift)
+        .filter(Shift.user_id == user_id, Shift.status == "open")
+        .first()
+    )
+
+
+def open_shift(db: Session, user_id: int):
+    """Opens a new shift for the user. Blocks if one is already open."""
+    existing = get_active_shift(db, user_id)
+    if existing:
+        return {"error": "You already have an open shift. Close it before opening a new one."}
+
+    shift = Shift(user_id=user_id)
+    db.add(shift)
+    db.commit()
+    db.refresh(shift)
+    return shift
+
+
+def close_shift(db: Session, user_id: int):
+    """Closes the user's currently open shift."""
+    shift = get_active_shift(db, user_id)
+    if not shift:
+        return {"error": "No open shift found. Open a shift first."}
+
+    shift.status = "closed"
+    shift.closed_at = datetime.utcnow()
+    db.commit()
+    db.refresh(shift)
+    return shift
+
+
+def get_shift_summary(db: Session, shift: Shift):
+    """
+    Calculates total sales and revenue for a given shift by matching
+    sales made by that user within the shift's time window.
+    """
+    query = (
+        db.query(
+            func.count(Sale.sale_id).label("total_sales"),
+            func.coalesce(func.sum(Sale.total_amount), 0).label("total_revenue")
+        )
+        .filter(
+            Sale.user_id == shift.user_id,
+            Sale.is_voided == False,  # noqa: E712
+            Sale.sale_date >= shift.opened_at,
+        )
+    )
+
+    # For closed shifts, cap at closed_at.
+    # For open shifts, count everything up to now.
+    if shift.closed_at:
+        query = query.filter(Sale.sale_date <= shift.closed_at)
+
+    result = query.one()
+
+    return {
+        "shift_id": shift.shift_id,
+        "user_id": shift.user_id,
+        "opened_at": shift.opened_at,
+        "closed_at": shift.closed_at,
+        "status": shift.status,
+        "total_sales": result.total_sales or 0,
+        "total_revenue": float(result.total_revenue or 0),
+    }
+
+
+def get_my_shifts(db: Session, user_id: int):
+    """Returns all shifts for a specific user, newest first."""
+    return (
+        db.query(Shift)
+        .filter(Shift.user_id == user_id)
+        .order_by(Shift.opened_at.desc())
+        .all()
+    )
+
+
+def get_all_shifts(db: Session):
+    """Admin: returns all shifts across all users, newest first."""
+    return (
+        db.query(Shift)
+        .order_by(Shift.opened_at.desc())
+        .all()
+    )
