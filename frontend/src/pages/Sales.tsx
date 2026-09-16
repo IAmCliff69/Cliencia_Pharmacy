@@ -14,6 +14,9 @@ function Sales() {
   const [selectedSale, setSelectedSale] = useState<SaleResponse | null>(null);
   const [voidTarget, setVoidTarget] = useState<SaleResponse | null>(null);
   const [voidError, setVoidError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("");
 
   const { data: sales = [], isLoading, isError } = useQuery({
     queryKey: ["sales"],
@@ -38,6 +41,14 @@ const { data: users = [] } = useQuery({
 const userMap = Object.fromEntries(
   users.map((u) => [u.user_id, `${u.first_name} ${u.last_name}`])
 );
+
+  const filteredSales = sales.filter((sale) => {
+    const value = search.trim().toLowerCase();
+    const matchesSearch = !value || String(sale.sale_id).includes(value) || (sale.customer_name ?? "walk-in").toLowerCase().includes(value);
+    const matchesStatus = statusFilter === "all" || (sale.is_voided ? "voided" : "completed") === statusFilter;
+    const matchesDate = !dateFilter || sale.sale_date.startsWith(dateFilter);
+    return matchesSearch && matchesStatus && matchesDate;
+  });
 
   const voidMutation = useMutation({
     mutationFn: (saleId: number) => voidSale(saleId),
@@ -77,9 +88,18 @@ const userMap = Object.fromEntries(
           Sales History
         </h1>
         <p className="text-ink-muted text-sm mt-1">
-          All completed sales.
-          {isAdmin && " Admins can void sales to restore stock."}
+          {isAdmin
+            ? "All staff sales. Admins can void sales to restore stock."
+            : "Your completed sales only."}
         </p>
+      </div>
+
+      <div className="mb-4 flex flex-wrap gap-3">
+        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search sale number or customer..." className="min-w-56 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-primary/40" />
+        <input type="date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} aria-label="Filter sales by date" className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink" />
+        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink">
+          <option value="all">All statuses</option><option value="completed">Completed</option><option value="voided">Voided</option>
+        </select>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -93,13 +113,13 @@ const userMap = Object.fromEntries(
             <div className="p-8 text-center text-red-600 text-sm">
               Failed to load sales.
             </div>
-          ) : sales.length === 0 ? (
+          ) : filteredSales.length === 0 ? (
             <div className="p-8 text-center text-ink-muted text-sm">
               No sales yet. Complete a sale in the Point of Sale screen.
             </div>
           ) : (
             <ul className="divide-y divide-border">
-              {sales.map((sale) => (
+              {filteredSales.map((sale) => (
                 <li
                   key={sale.sale_id}
                   onClick={() => setSelectedSale(sale)}

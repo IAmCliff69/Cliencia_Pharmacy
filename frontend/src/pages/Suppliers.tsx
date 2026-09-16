@@ -8,6 +8,7 @@ import {
 } from "../api/suppliers";
 import type { SupplierResponse, SupplierCreate } from "../types/supplier";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 function Suppliers() {
   const { user } = useAuth();
@@ -18,6 +19,8 @@ function Suppliers() {
   const [editingSupplier, setEditingSupplier] = useState<SupplierResponse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SupplierResponse | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const { showToast } = useToast();
 
   const { data: suppliers, isLoading, isError } = useQuery({
     queryKey: ["suppliers"],
@@ -29,6 +32,7 @@ function Suppliers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       closeModal();
+      showToast("Supplier created successfully.", "success");
     },
     onError: (err: any) => {
       setFormError(err?.response?.data?.detail ?? "Failed to create supplier.");
@@ -41,6 +45,7 @@ function Suppliers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       closeModal();
+      showToast("Supplier updated successfully.", "success");
     },
     onError: (err: any) => {
       setFormError(err?.response?.data?.detail ?? "Failed to update supplier.");
@@ -52,6 +57,10 @@ function Suppliers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       setDeleteTarget(null);
+      showToast("Supplier deleted successfully.", "success");
+    },
+    onError: (err: any) => {
+      showToast(err?.response?.data?.detail ?? "Failed to delete supplier.", "error");
     },
   });
 
@@ -82,6 +91,13 @@ function Suppliers() {
   };
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
+  const filteredSuppliers = (suppliers ?? []).filter((supplier) => {
+    const value = search.trim().toLowerCase();
+    return !value || [supplier.supplier_name, supplier.contact_person, supplier.phone, supplier.email]
+      .join(" ")
+      .toLowerCase()
+      .includes(value);
+  });
 
   return (
     <div>
@@ -102,6 +118,15 @@ function Suppliers() {
         )}
       </div>
 
+      <div className="mb-4">
+        <input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search suppliers, contacts, phone, or email..."
+          className="w-full max-w-xl rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-primary/40"
+        />
+      </div>
+
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-ink-muted text-sm">
@@ -111,7 +136,7 @@ function Suppliers() {
           <div className="p-8 text-center text-danger text-sm">
             Failed to load suppliers. Please try again.
           </div>
-        ) : suppliers && suppliers.length > 0 ? (
+        ) : filteredSuppliers.length > 0 ? (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-bg text-left">
@@ -128,7 +153,7 @@ function Suppliers() {
               </tr>
             </thead>
             <tbody>
-              {suppliers.map((supplier) => (
+              {filteredSuppliers.map((supplier) => (
                 <tr
                   key={supplier.supplier_id}
                   className="border-b border-border last:border-0 hover:bg-bg transition-colors"
@@ -166,7 +191,7 @@ function Suppliers() {
           </table>
         ) : (
           <div className="p-8 text-center text-ink-muted text-sm">
-            No suppliers yet.
+            {search ? "No suppliers match your search." : "No suppliers yet."}
             {isAdmin && " Click \"Add supplier\" to create your first one."}
           </div>
         )}

@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { Printer } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getMedicines } from "../api/medicines";
 import { createSale } from "../api/sales";
 import type { MedicineWithStockResponse } from "../types/medicine";
 import type { SaleCreate, SaleResponse } from "../types/sale";
 import { getActiveShift } from "../api/shift";
+import { useToast } from "../context/ToastContext";
 // -----------------------------
 // Types
 // -----------------------------
@@ -17,6 +19,8 @@ interface CartItem {
 // POS Page
 // -----------------------------
 function POS() {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerName, setCustomerName] = useState("");
@@ -33,16 +37,22 @@ function POS() {
   const checkoutMutation = useMutation({
     mutationFn: (data: SaleCreate) => createSale(data),
     onSuccess: (sale) => {
+      queryClient.invalidateQueries({ queryKey: ["medicines"] });
+      queryClient.invalidateQueries({ queryKey: ["medicines-low-stock"] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+      queryClient.invalidateQueries({ queryKey: ["sales"] });
       setCompletedSale(sale);
       setCart([]);
       setCustomerName("");
       setSearch("");
       setCheckoutError(null);
+      showToast(`Sale #${sale.sale_id} completed successfully.`, "success");
     },
     onError: (err: any) => {
       setCheckoutError(
         err?.response?.data?.detail ?? "Checkout failed. Please try again."
       );
+      showToast(err?.response?.data?.detail ?? "Checkout failed. Please try again.", "error");
     },
   });
 
@@ -178,12 +188,21 @@ function POS() {
             </div>
           </div>
 
-          <button
-            onClick={() => setCompletedSale(null)}
-            className="bg-primary text-white text-sm font-medium px-6 py-2 rounded-md hover:bg-primary-dark transition-colors"
-          >
-            New sale
-          </button>
+          <div className="flex justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-ink-muted hover:border-primary hover:text-primary"
+            >
+              <Printer size={15} /> Print receipt
+            </button>
+            <button
+              onClick={() => setCompletedSale(null)}
+              className="bg-primary text-white text-sm font-medium px-6 py-2 rounded-md hover:bg-primary-dark transition-colors"
+            >
+              New sale
+            </button>
+          </div>
         </div>
       </div>
     );

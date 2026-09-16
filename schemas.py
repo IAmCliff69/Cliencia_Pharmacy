@@ -163,6 +163,7 @@ class ShiftResponse(BaseModel):
 class ShiftSummaryResponse(BaseModel):
     shift_id: int
     user_id: int
+    user_name: str
     opened_at: datetime
     closed_at: Optional[datetime] = None
     status: str

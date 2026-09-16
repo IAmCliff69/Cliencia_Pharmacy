@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { BarChart3, Clock3, Pill, ShoppingCart } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { getLowStockMedicines, getExpiringMedicines, getExpiredMedicines } from "../api/medicines";
 import { getSalesSummary } from "../api/reports";
@@ -58,18 +59,21 @@ function MedicineAlertRow({
   detail,
   badge,
   badgeColor,
+  onClick,
 }: {
   name: string;
   detail: string;
   badge: string;
   badgeColor: "yellow" | "red";
+  onClick?: () => void;
 }) {
   const badgeStyles = {
     yellow: "bg-yellow-100 text-yellow-700 border-yellow-200",
     red: "bg-red-100 text-red-600 border-red-200",
   };
   return (
-    <li className="flex items-center justify-between px-4 py-3 border-b border-border last:border-0 hover:bg-bg transition-colors">
+    <li className="border-b border-border last:border-0">
+      <button type="button" onClick={onClick} className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-bg transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary">
       <div>
         <p className="text-sm font-medium text-ink">{name}</p>
         <p className="text-xs text-ink-muted">{detail}</p>
@@ -79,6 +83,7 @@ function MedicineAlertRow({
       >
         {badge}
       </span>
+      </button>
     </li>
   );
 }
@@ -126,7 +131,7 @@ function Dashboard() {
   return (
     <div>
       {/* Welcome hero */}
-      <div className="relative mb-6 min-h-[178px] overflow-hidden rounded-2xl bg-[#123f52] shadow-sm">
+      <div className="relative mb-6 min-h-[178px] overflow-hidden rounded-2xl bg-[var(--color-brand)] shadow-sm">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
@@ -134,7 +139,7 @@ function Dashboard() {
           }}
           aria-hidden="true"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#123f52] via-[#123f52]/90 to-[#123f52]/20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-brand)] via-[var(--color-brand)]/90 to-[var(--color-brand)]/20" />
         <div className="relative z-10 flex min-h-[178px] items-center justify-between px-7 py-6">
           <div>
             <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8ae4fa]">
@@ -147,7 +152,7 @@ function Dashboard() {
               Here&apos;s what&apos;s happening in your pharmacy today.
             </p>
           </div>
-          <div className="hidden h-14 w-14 shrink-0 place-items-center rounded-full border-4 border-white/40 bg-[#da275a] text-lg font-bold text-white shadow-lg sm:grid">
+          <div className="hidden h-14 w-14 shrink-0 place-items-center rounded-full border-4 border-white/40 bg-[var(--color-brand-accent)] text-lg font-bold text-[var(--color-brand-contrast)] shadow-lg sm:grid">
             {user?.profile_image_url ? (
               <img src={user.profile_image_url} alt="Your profile" className="h-full w-full rounded-full object-cover" />
             ) : (
@@ -155,6 +160,28 @@ function Dashboard() {
             )}
           </div>
         </div>
+      </div>
+
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[
+          { label: "Point of Sale", detail: "Record a sale", icon: ShoppingCart, to: "/pos" },
+          { label: "Medicines", detail: "Manage inventory", icon: Pill, to: "/medicines" },
+          { label: "Shifts", detail: "Open or review shifts", icon: Clock3, to: "/shifts" },
+          { label: "Reports", detail: "Review performance", icon: BarChart3, to: "/reports" },
+        ].map((action) => (
+          <button
+            key={action.to}
+            type="button"
+            onClick={() => navigate(action.to)}
+            className="flex items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3 text-left transition-colors hover:border-primary hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            <action.icon size={19} className="shrink-0 text-primary" />
+            <span>
+              <span className="block text-sm font-semibold text-ink">{action.label}</span>
+              <span className="block text-xs text-ink-muted">{action.detail}</span>
+            </span>
+          </button>
+        ))}
       </div>
 
       {isLoading ? (
@@ -220,6 +247,7 @@ function Dashboard() {
                       detail={`Stock: ${med.inventory?.quantity_available ?? 0} / Min: ${med.inventory?.minimum_stock_level ?? 10}`}
                       badge="Low stock"
                       badgeColor="yellow"
+                      onClick={() => navigate("/medicines")}
                     />
                   ))}
                   {lowStock.length > 6 && (
@@ -257,6 +285,7 @@ function Dashboard() {
                       detail={`Expired: ${med.expiry_date}`}
                       badge="Expired"
                       badgeColor="red"
+                      onClick={() => navigate("/medicines")}
                     />
                   ))}
                   {expiring.slice(0, 3).map((med) => (
@@ -266,6 +295,7 @@ function Dashboard() {
                       detail={`Expires: ${med.expiry_date}`}
                       badge="Expiring soon"
                       badgeColor="yellow"
+                      onClick={() => navigate("/medicines")}
                     />
                   ))}
                   {(expired.length + expiring.length) > 6 && (

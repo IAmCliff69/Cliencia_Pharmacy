@@ -9,6 +9,7 @@ export interface ShiftResponse {
 export interface ShiftSummaryResponse {
   shift_id: number;
   user_id: number;
+  user_name: string;
   opened_at: string;
   closed_at: string | null;
   status: "open" | "closed";

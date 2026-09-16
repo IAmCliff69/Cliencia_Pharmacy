@@ -431,17 +431,46 @@ def create_sale(db: Session, sale_data, user_id: int):
     return new_sale
 
 
-def get_sales(db: Session):
-    return db.query(Sale).options(joinedload(Sale.items)).all()
+def get_sales(
+    db: Session,
+    user_id: int = None,
+    start_date: date = None,
+    end_date: date = None,
+):
+    query = db.query(Sale).options(joinedload(Sale.items))
+    if user_id is not None:
+        query = query.filter(Sale.user_id == user_id)
+    if start_date:
+        query = query.filter(Sale.sale_date >= start_date)
+    if end_date:
+        query = query.filter(Sale.sale_date < end_date + timedelta(days=1))
+    return query.order_by(Sale.sale_date.desc()).all()
 
 
-def get_sale_by_id(db: Session, sale_id: int):
+def get_sales_for_shift(db: Session, shift: Shift):
+    end_time = shift.closed_at or datetime.utcnow()
     return (
         db.query(Sale)
         .options(joinedload(Sale.items))
-        .filter(Sale.sale_id == sale_id)
-        .first()
+        .filter(
+            Sale.user_id == shift.user_id,
+            Sale.sale_date >= shift.opened_at,
+            Sale.sale_date <= end_time,
+        )
+        .order_by(Sale.sale_date.desc())
+        .all()
     )
+
+
+def get_sale_by_id(db: Session, sale_id: int, user_id: int = None):
+    query = (
+        db.query(Sale)
+        .options(joinedload(Sale.items))
+        .filter(Sale.sale_id == sale_id)
+    )
+    if user_id is not None:
+        query = query.filter(Sale.user_id == user_id)
+    return query.first()
 
 
 def void_sale(db: Session, sale_id: int):
@@ -481,12 +510,20 @@ def void_sale(db: Session, sale_id: int):
 # REPORTING
 # -----------------------------
 
-def get_sales_summary(db: Session, start_date: date = None, end_date: date = None):
+def get_sales_summary(
+    db: Session,
+    start_date: date = None,
+    end_date: date = None,
+    user_id: int = None,
+):
 
     query = db.query(
         func.count(Sale.sale_id).label("total_sales"),
         func.coalesce(func.sum(Sale.total_amount), 0).label("total_revenue")
     ).filter(Sale.is_voided == False)  # noqa: E712
+
+    if user_id is not None:
+        query = query.filter(Sale.user_id == user_id)
 
     if start_date:
         query = query.filter(Sale.sale_date >= start_date)
@@ -504,7 +541,13 @@ def get_sales_summary(db: Session, start_date: date = None, end_date: date = Non
     }
 
 
-def get_top_medicines(db: Session, limit: int = 10):
+def get_top_medicines(
+    db: Session,
+    start_date: date = None,
+    end_date: date = None,
+    user_id: int = None,
+    limit: int = 10,
+):
 
     results = (
         db.query(
@@ -516,11 +559,18 @@ def get_top_medicines(db: Session, limit: int = 10):
         .join(Medicine, Medicine.medicine_id == SaleItem.medicine_id)
         .join(Sale, Sale.sale_id == SaleItem.sale_id)
         .filter(Sale.is_voided == False)  # noqa: E712
-        .group_by(SaleItem.medicine_id, Medicine.medicine_name)
-        .order_by(func.sum(SaleItem.quantity).desc())
-        .limit(limit)
-        .all()
     )
+
+    if user_id is not None:
+        results = results.filter(Sale.user_id == user_id)
+    if start_date:
+        results = results.filter(Sale.sale_date >= start_date)
+    if end_date:
+        results = results.filter(Sale.sale_date < end_date + timedelta(days=1))
+
+    results = results.group_by(
+        SaleItem.medicine_id, Medicine.medicine_name
+    ).order_by(func.sum(SaleItem.quantity).desc()).limit(limit).all()
 
     return [
         {
@@ -598,6 +648,7 @@ def get_shift_summary(db: Session, shift: Shift):
     return {
         "shift_id": shift.shift_id,
         "user_id": shift.user_id,
+        "user_name": f"{shift.user.first_name} {shift.user.last_name}",
         "opened_at": shift.opened_at,
         "closed_at": shift.closed_at,
         "status": shift.status,

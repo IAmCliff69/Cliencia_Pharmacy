@@ -1,9 +1,29 @@
 .login-page {
+  --auth-page: var(--color-bg);
+  --auth-shell: var(--color-surface);
+  --auth-art: var(--color-bg);
+  --auth-panel: var(--color-brand);
+  --auth-copy: #c6e2dc;
+  --auth-label: #d2e8e3;
+  --auth-muted: #91b9b0;
+}
+
+html.dark .login-page {
+  --auth-page: var(--color-bg);
+  --auth-shell: var(--color-surface);
+  --auth-art: var(--color-bg);
+  --auth-panel: var(--color-brand);
+  --auth-copy: #b8d2db;
+  --auth-label: #d3e7ed;
+  --auth-muted: #91b5c2;
+}
+
+.login-page {
   min-height: 100vh;
   display: grid;
   place-items: center;
   padding: 0;
-  background: #d9ebe7;
+  background: var(--auth-page);
   font-family: "Manrope", "Trebuchet MS", sans-serif;
 }
 
@@ -15,7 +35,7 @@
   grid-template-columns: 1.2fr 0.8fr;
   overflow: hidden;
   border-radius: 0;
-  background: #f8fbf9;
+  background: var(--auth-shell);
   box-shadow: 0 28px 70px rgba(27, 73, 66, 0.2);
 }
 
@@ -23,7 +43,7 @@
   position: relative;
   overflow: hidden;
   padding: 42px 48px;
-  background: #dcebe7 url("../assets/Pharmacy Task Automation_ Daily Operations to Patient Care.jpeg") center center / cover no-repeat;
+  background: var(--auth-art) url("../assets/Pharmacy Task Automation_ Daily Operations to Patient Care.jpeg") center center / cover no-repeat;
   color: #17564d;
 }
 
@@ -36,7 +56,7 @@
   width: 300px;
   height: 116%;
   border-radius: 50%;
-  background: #123f52;
+  background: var(--color-brand);
 }
 
 .login-art::after {
@@ -58,7 +78,7 @@
 
 .login-brand {
   padding: 0;
-  color: #ffffff;
+  color: var(--color-brand-contrast);
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
 }
 
@@ -171,22 +191,22 @@
   flex-direction: column;
   justify-content: space-between;
   padding: 32px 12%;
-  background: #123f52;
+  background: var(--auth-panel);
   color: #fff;
 }
 
 .login-panel-inner { width: min(360px, 100%); margin: auto; }
 .login-eyebrow { margin: 0 0 14px; color: #9dd8cc; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
 .login-panel h1 { margin: 0; font-family: Georgia, serif; font-size: clamp(42px, 5vw, 62px); font-weight: 400; line-height: 1; }
-.login-subtitle { max-width: 290px; margin: 14px 0 24px; color: #c6e2dc; font-size: 14px; line-height: 1.5; }
+.login-subtitle { max-width: 290px; margin: 14px 0 24px; color: var(--auth-copy); font-size: 14px; line-height: 1.5; }
 .login-form { display: grid; gap: 12px; }
 .register-name-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .login-field { display: grid; gap: 8px; }
-.login-field label { color: #d2e8e3; font-size: 12px; font-weight: 700; }
+.login-field label { color: var(--auth-label); font-size: 12px; font-weight: 700; }
 .login-field input { width: 100%; box-sizing: border-box; border: 1px solid rgba(205, 235, 228, .28); border-radius: 10px; outline: none; padding: 14px 16px; background: rgba(4, 42, 35, .33); color: #fff; font: inherit; font-size: 13px; transition: border-color .2s, box-shadow .2s; }
-.login-field input::placeholder { color: #91b9b0; }
+.login-field input::placeholder { color: var(--auth-muted); }
 .register-file-input { padding: 10px 12px !important; cursor: pointer; }
-.register-file-help { margin-top: -3px; color: #91b9b0; font-size: 10px; }
+.register-file-help { margin-top: -3px; color: var(--auth-muted); font-size: 10px; }
 .login-field input:focus { border-color: #8cddd0; box-shadow: 0 0 0 3px rgba(140, 221, 208, .16); }
 .login-options { display: flex; align-items: center; justify-content: space-between; margin-top: -3px; color: #a8d0c7; font-size: 11px; }
 .remember-option { display: flex; align-items: center; gap: 7px; }
@@ -194,7 +214,7 @@
 .forgot-link { border: 0; padding: 0; background: none; color: #a8d0c7; font: inherit; cursor: pointer; }
 .forgot-link:hover, .register-prompt a:hover { color: #fff; }
 .login-error { margin: 0; border: 1px solid rgba(255, 170, 170, .4); border-radius: 8px; padding: 10px 12px; background: rgba(151, 30, 45, .22); color: #ffd3d3; font-size: 12px; }
-.login-submit { display: flex; align-items: center; justify-content: center; gap: 18px; border: 0; border-radius: 10px; padding: 13px 18px; background: #2fc9f4; color: #123f52; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; transition: transform .2s, background .2s; }
+.login-submit { display: flex; align-items: center; justify-content: center; gap: 18px; border: 0; border-radius: 10px; padding: 13px 18px; background: var(--color-primary); color: var(--color-brand); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; transition: transform .2s, background .2s; }
 .login-submit:hover:not(:disabled) { background: #8ae4fa; transform: translateY(-2px); }
 .login-submit:disabled { cursor: wait; opacity: .65; }
 .login-submit span { font-size: 20px; line-height: 0; }

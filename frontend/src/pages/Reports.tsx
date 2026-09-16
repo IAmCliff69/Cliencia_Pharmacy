@@ -1,16 +1,23 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getSalesSummary } from "../api/reports";
+import { downloadSalesReportPdf } from "../api/reports";
+import { Download } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+
+const getDateString = (date: Date) => date.toISOString().split("T")[0];
+const getDateDaysAgo = (days: number) =>
+  getDateString(new Date(Date.now() - days * 24 * 60 * 60 * 1000));
 
 function Reports() {
-  const today = new Date().toISOString().split("T")[0];
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0];
+  const { user } = useAuth();
+  const isAdmin = user?.role.trim().toLowerCase() === "admin";
+  const [today] = useState(() => getDateString(new Date()));
+  const [thirtyDaysAgo] = useState(() => getDateDaysAgo(30));
 
-  const [startDate, setStartDate] = useState(thirtyDaysAgo);
+  const [startDate, setStartDate] = useState(isAdmin ? today : thirtyDaysAgo);
   const [endDate, setEndDate] = useState(today);
-  const [appliedStart, setAppliedStart] = useState(thirtyDaysAgo);
+  const [appliedStart, setAppliedStart] = useState(isAdmin ? today : thirtyDaysAgo);
   const [appliedEnd, setAppliedEnd] = useState(today);
 
   const { data, isLoading, isError } = useQuery({
@@ -34,6 +41,65 @@ function Reports() {
     setAppliedEnd("");
   };
 
+  const applyPreset = (days: number | null) => {
+    if (days === null) {
+      handleClear();
+      return;
+    }
+    const start = getDateDaysAgo(days);
+    setStartDate(start);
+    setEndDate(today);
+    setAppliedStart(start);
+    setAppliedEnd(today);
+  };
+
+  const exportCsv = () => {
+    if (!data) return;
+    const rows = [
+      ["Medicine", "Quantity sold", "Revenue"],
+      ...data.top_medicines.map((medicine) => [
+        medicine.medicine_name,
+        String(medicine.total_quantity_sold),
+        medicine.total_revenue.toFixed(2),
+      ]),
+    ];
+    const csv = rows
+      .map((row) => row.map((value) => `"${value.replaceAll('"', '""')}"`).join(","))
+      .join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `sales-report-${appliedStart || "all-time"}-${appliedEnd || "all-time"}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadPdf = async () => {
+    const blob = await downloadSalesReportPdf({
+      start_date: appliedStart || undefined,
+      end_date: appliedEnd || undefined,
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `sales-report-${appliedStart || "today"}-${appliedEnd || "today"}.pdf`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadTodayTotal = async () => {
+    const blob = await downloadSalesReportPdf({
+      start_date: today,
+      end_date: today,
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `all-users-sales-report-${today}.pdf`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const maxRevenue = data?.top_medicines.length
     ? Math.max(...data.top_medicines.map((m) => m.total_revenue))
     : 0;
@@ -43,12 +109,25 @@ function Reports() {
       <div className="mb-6">
         <h1 className="font-display font-bold text-2xl text-ink">Reports</h1>
         <p className="text-ink-muted text-sm mt-1">
-          Sales summary and top-performing medicines.
+          {isAdmin ? "All staff and admin sales for the selected period." : "Your sales and top-performing medicines."}
         </p>
       </div>
 
       {/* Date range filter */}
-      <div className="bg-surface border border-border rounded-lg p-4 mb-6 flex flex-wrap gap-3 items-end">
+      <div className="bg-surface border border-border rounded-lg p-4 mb-6 space-y-4">
+        <div className="flex flex-wrap gap-2">
+          {[{ label: "Today", days: 0 }, { label: "Last 7 days", days: 7 }, { label: "Last 30 days", days: 30 }, { label: "All time", days: null }].map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              onClick={() => applyPreset(preset.days)}
+              className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-ink-muted hover:border-primary hover:text-primary"
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-3 items-end">
         <div>
           <label className="block text-xs font-medium text-ink-muted mb-1">
             From
@@ -83,6 +162,7 @@ function Reports() {
         >
           Clear (all time)
         </button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -150,13 +230,26 @@ function Reports() {
 
           {/* Top medicines */}
           <div className="bg-surface border border-border rounded-lg overflow-hidden">
-            <div className="px-6 py-4 border-b border-border">
+            <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-border">
+              <div>
               <h2 className="font-display font-semibold text-ink">
                 Top medicines by revenue
               </h2>
               <p className="text-xs text-ink-muted mt-0.5">
                 Up to 10 best-selling medicines in the selected period
               </p>
+              </div>
+              <button type="button" onClick={downloadPdf} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-medium text-ink-muted hover:border-primary hover:text-primary">
+                <Download size={14} /> Download PDF
+              </button>
+              {isAdmin && (
+                <button type="button" onClick={downloadTodayTotal} className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-medium text-white hover:bg-primary-dark">
+                  <Download size={14} /> Today&apos;s total PDF
+                </button>
+              )}
+              <button type="button" onClick={exportCsv} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-medium text-ink-muted hover:border-primary hover:text-primary">
+                <Download size={14} /> Export CSV
+              </button>
             </div>
 
             {data.top_medicines.length === 0 ? (

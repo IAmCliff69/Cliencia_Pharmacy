@@ -61,7 +61,7 @@ def get_current_user(
 # 🔒 Admin only
 def require_admin(current_user = Depends(get_current_user)):
 
-    if current_user.role != "admin":
+    if current_user.role.strip().lower() != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
@@ -73,7 +73,7 @@ def require_admin(current_user = Depends(get_current_user)):
 # 🔒 Staff or Admin (any logged-in user)
 def require_staff(current_user = Depends(get_current_user)):
 
-    if current_user.role not in ["admin", "staff"]:
+    if current_user.role.strip().lower() not in ["admin", "staff"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized"

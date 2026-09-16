@@ -1,15 +1,23 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Query
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import Optional
-from datetime import date
+from datetime import date, datetime
+from io import BytesIO
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from database import engine, get_db
 
 
 # ✅ Import auth router
 from app.auth.routes import router as auth_router
+from app.auth.models import User
 
 # ✅ Import role-based dependencies
 from app.auth.dependencies import require_admin, require_staff
@@ -442,7 +450,8 @@ def get_sales(
     db: Session = Depends(get_db),
     current_user = Depends(require_staff)
 ):
-    return crud.get_sales(db)
+    user_id = None if current_user.role.strip().lower() == "admin" else current_user.user_id
+    return crud.get_sales(db, user_id=user_id)
 
 
 # ✅ READ ONE → STAFF + ADMIN
@@ -452,7 +461,8 @@ def get_sale(
     db: Session = Depends(get_db),
     current_user = Depends(require_staff)
 ):
-    sale = crud.get_sale_by_id(db, sale_id)
+    user_id = None if current_user.role.strip().lower() == "admin" else current_user.user_id
+    sale = crud.get_sale_by_id(db, sale_id, user_id=user_id)
 
     if not sale:
         raise HTTPException(status_code=404, detail="Sale not found")
@@ -575,7 +585,165 @@ def get_sales_summary(
     db: Session = Depends(get_db),
     current_user = Depends(require_staff)
 ):
-    summary = crud.get_sales_summary(db, start_date, end_date)
-    summary["top_medicines"] = crud.get_top_medicines(db)
+    user_id = None if current_user.role.strip().lower() == "admin" else current_user.user_id
+    summary = crud.get_sales_summary(db, start_date, end_date, user_id=user_id)
+    summary["top_medicines"] = crud.get_top_medicines(
+        db, start_date=start_date, end_date=end_date, user_id=user_id
+    )
 
     return summary
+
+
+@app.get("/reports/sales-pdf")
+def download_sales_report_pdf(
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_staff),
+):
+    is_admin = current_user.role.strip().lower() == "admin"
+    user_id = None if is_admin else current_user.user_id
+    report_start = start_date or date.today()
+    report_end = end_date or report_start
+    sales = crud.get_sales(
+        db,
+        user_id=user_id,
+        start_date=report_start,
+        end_date=report_end,
+    )
+    staff_names = {
+        staff.user_id: f"{staff.first_name} {staff.last_name}"
+        for staff in db.query(User).filter(
+            User.user_id.in_({sale.user_id for sale in sales})
+        ).all()
+    }
+
+    buffer = BytesIO()
+    document = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=16 * mm,
+        leftMargin=16 * mm,
+        topMargin=16 * mm,
+        bottomMargin=16 * mm,
+    )
+    styles = getSampleStyleSheet()
+    story = [
+        Paragraph("Cliencia Pharmacy Sales Report", styles["Title"]),
+        Paragraph(
+            f"{'All users' if is_admin else current_user.first_name + ' ' + current_user.last_name} | {report_start} to {report_end}",
+            styles["Normal"],
+        ),
+        Spacer(1, 10),
+    ]
+    rows = [["Sale", "Staff", "Customer", "Date", "Amount", "Status"]]
+    total = 0.0
+    for sale in sales:
+        amount = float(sale.total_amount)
+        if not sale.is_voided:
+            total += amount
+        rows.append([
+            f"#{sale.sale_id}",
+            staff_names.get(sale.user_id, f"Staff #{sale.user_id}"),
+            sale.customer_name or "Walk-in",
+            sale.sale_date.strftime("%d %b %Y %H:%M"),
+            f"GH₵{amount:.2f}",
+            "Voided" if sale.is_voided else "Completed",
+        ])
+    if len(rows) == 1:
+        rows.append(["-", "-", "No sales", "-", "GH₵0.00", "-"])
+    rows.append(["", "", "", "", f"GH₵{total:.2f}", "Net total"])
+    table = Table(rows, repeatRows=1)
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#123f52")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#c9eaf3")),
+        ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#dff6fb")),
+        ("ALIGN", (4, 1), (4, -1), "RIGHT"),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("PADDING", (0, 0), (-1, -1), 5),
+    ]))
+    story.append(table)
+    document.build(story)
+    buffer.seek(0)
+    filename = f"sales-report-{report_start}-{report_end}.pdf"
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.get("/reports/shift-pdf/{shift_id}")
+def download_shift_report_pdf(
+    shift_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_staff),
+):
+    shift = db.query(models.Shift).filter(models.Shift.shift_id == shift_id).first()
+    if not shift:
+        raise HTTPException(status_code=404, detail="Shift not found")
+
+    is_admin = current_user.role.strip().lower() == "admin"
+    if not is_admin and shift.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="You can only download your own shift reports")
+
+    sales = crud.get_sales_for_shift(db, shift)
+    staff = db.query(User).filter(User.user_id == shift.user_id).first()
+    staff_name = f"{staff.first_name} {staff.last_name}" if staff else f"Staff #{shift.user_id}"
+    shift_end = shift.closed_at or datetime.utcnow()
+
+    buffer = BytesIO()
+    document = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=16 * mm,
+        leftMargin=16 * mm,
+        topMargin=16 * mm,
+        bottomMargin=16 * mm,
+    )
+    styles = getSampleStyleSheet()
+    story = [
+        Paragraph("Cliencia Pharmacy Shift Report", styles["Title"]),
+        Paragraph(
+            f"{staff_name} | {shift.opened_at.strftime('%d %b %Y %H:%M')} to "
+            f"{shift_end.strftime('%d %b %Y %H:%M')}",
+            styles["Normal"],
+        ),
+        Spacer(1, 10),
+    ]
+    rows = [["Sale", "Customer", "Date", "Amount", "Status"]]
+    total = 0.0
+    for sale in sales:
+        amount = float(sale.total_amount)
+        if not sale.is_voided:
+            total += amount
+        rows.append([
+            f"#{sale.sale_id}",
+            sale.customer_name or "Walk-in",
+            sale.sale_date.strftime("%d %b %Y %H:%M"),
+            f"GH₵{amount:.2f}",
+            "Voided" if sale.is_voided else "Completed",
+        ])
+    if len(rows) == 1:
+        rows.append(["-", "No sales", "-", "GH₵0.00", "-"])
+    rows.append(["", "", "", f"GH₵{total:.2f}", "Net total"])
+    table = Table(rows, repeatRows=1)
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#123f52")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#c9eaf3")),
+        ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#dff6fb")),
+        ("ALIGN", (3, 1), (3, -1), "RIGHT"),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("PADDING", (0, 0), (-1, -1), 5),
+    ]))
+    story.append(table)
+    document.build(story)
+    buffer.seek(0)
+    filename = f"shift-report-{shift.shift_id}-{shift.opened_at.date()}.pdf"
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

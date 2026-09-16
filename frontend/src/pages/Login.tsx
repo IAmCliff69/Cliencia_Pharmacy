@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import ThemeToggle from "../components/ThemeToggle";
 import logo from "../assets/Logo.svg";
 import "./Login.css";
 
@@ -35,6 +36,7 @@ function Login() {
 
   return (
     <main className="login-page">
+      <ThemeToggle />
       <section className="login-shell" aria-label="Cliencia Pharmacy login">
         <div className="login-art" aria-hidden="true">
           <div className="login-brand">

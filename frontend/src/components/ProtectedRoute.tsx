@@ -27,7 +27,11 @@ function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+  if (
+    allowedRoles &&
+    user &&
+    !allowedRoles.includes(user.role.trim().toLowerCase() as "staff" | "admin")
+  ) {
     // Logged in, but wrong role (e.g. staff trying to hit an
     // admin-only route). Send them somewhere valid rather than
     // showing a blank/broken page.

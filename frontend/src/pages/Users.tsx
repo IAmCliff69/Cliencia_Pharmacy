@@ -5,17 +5,36 @@ import {
   deactivateUser,
   reactivateUser,
 } from "../api/auth";
+import { getAllShifts } from "../api/shift";
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { useToast } from "../context/ToastContext";
 
 function Users() {
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
+  const [userSearch, setUserSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [shiftSearch, setShiftSearch] = useState("");
+  const [shiftStatusFilter, setShiftStatusFilter] = useState("all");
+  const [deactivateTarget, setDeactivateTarget] = useState<{ userId: number; name: string } | null>(null);
+  const { showToast } = useToast();
 
   const { data: users = [], isLoading, isError } = useQuery({
     queryKey: ["users"],
     queryFn: listUsers,
+  });
+
+  const {
+    data: allShifts = [],
+    isLoading: shiftsLoading,
+    isError: shiftsError,
+  } = useQuery({
+    queryKey: ["all-shifts"],
+    queryFn: getAllShifts,
   });
 
   const promoteMutation = useMutation({
@@ -23,6 +42,7 @@ function Users() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setActionError(null);
+      showToast("User promoted to admin.", "success");
     },
     onError: (err: any) => {
       setActionError(err?.response?.data?.detail ?? "Failed to promote user.");
@@ -34,6 +54,8 @@ function Users() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setActionError(null);
+      setDeactivateTarget(null);
+      showToast("User deactivated.", "success");
     },
     onError: (err: any) => {
       setActionError(
@@ -47,6 +69,7 @@ function Users() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setActionError(null);
+      showToast("User reactivated.", "success");
     },
     onError: (err: any) => {
       setActionError(
@@ -59,6 +82,37 @@ function Users() {
     promoteMutation.isPending ||
     deactivateMutation.isPending ||
     reactivateMutation.isPending;
+
+  const formatDateTime = (dateStr: string) =>
+    new Date(dateStr).toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  const formatDuration = (opened: string, closed: string | null) => {
+    if (!closed) return "Still open";
+    const milliseconds = new Date(closed).getTime() - new Date(opened).getTime();
+    const hours = Math.floor(milliseconds / (1000 * 60 * 60));
+    const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+  };
+
+  const filteredUsers = users.filter((candidate) => {
+    const search = userSearch.trim().toLowerCase();
+    const matchesSearch = !search || `${candidate.first_name} ${candidate.last_name} ${candidate.email}`.toLowerCase().includes(search);
+    const matchesRole = roleFilter === "all" || candidate.role === roleFilter;
+    const matchesStatus = statusFilter === "all" || (candidate.is_active ? "active" : "inactive") === statusFilter;
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
+  const filteredShifts = allShifts.filter((shift) => {
+    const matchesSearch = !shiftSearch.trim() || shift.user_name.toLowerCase().includes(shiftSearch.trim().toLowerCase());
+    const matchesStatus = shiftStatusFilter === "all" || shift.status === shiftStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div>
@@ -75,6 +129,16 @@ function Users() {
         </div>
       )}
 
+      <div className="mb-4 flex flex-wrap gap-3">
+        <input value={userSearch} onChange={(event) => setUserSearch(event.target.value)} placeholder="Search users..." className="min-w-56 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-primary/40" />
+        <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink">
+          <option value="all">All roles</option><option value="staff">Staff</option><option value="admin">Admin</option>
+        </select>
+        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink">
+          <option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option>
+        </select>
+      </div>
+
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-ink-muted text-sm">
@@ -84,7 +148,7 @@ function Users() {
           <div className="p-8 text-center text-red-600 text-sm">
             Failed to load users.
           </div>
-        ) : users.length === 0 ? (
+        ) : filteredUsers.length === 0 ? (
           <div className="p-8 text-center text-ink-muted text-sm">
             No users found.
           </div>
@@ -102,7 +166,7 @@ function Users() {
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => {
+              {filteredUsers.map((u) => {
                 const isSelf = u.user_id === currentUser?.user_id;
                 return (
                   <tr
@@ -156,9 +220,7 @@ function Users() {
                         {/* Deactivate — only for active users, not self */}
                         {u.is_active && !isSelf && (
                           <button
-                            onClick={() =>
-                              deactivateMutation.mutate(u.user_id)
-                            }
+                            onClick={() => setDeactivateTarget({ userId: u.user_id, name: `${u.first_name} ${u.last_name}` })}
                             disabled={isActioning}
                             className="text-red-600 hover:underline text-xs disabled:opacity-50"
                           >
@@ -194,6 +256,92 @@ function Users() {
           </table>
         )}
       </div>
+
+      <section className="mt-8">
+        <div className="mb-4">
+          <h2 className="font-display font-bold text-xl text-ink">Staff Shift Activity</h2>
+          <p className="text-ink-muted text-sm mt-1">
+            View every shift opened and closed by staff members.
+          </p>
+        </div>
+
+        <div className="mb-4 flex flex-wrap gap-3">
+          <input value={shiftSearch} onChange={(event) => setShiftSearch(event.target.value)} placeholder="Search by staff member..." className="min-w-56 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-primary/40" />
+          <select value={shiftStatusFilter} onChange={(event) => setShiftStatusFilter(event.target.value)} className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink">
+            <option value="all">All shift statuses</option><option value="open">Open</option><option value="closed">Closed</option>
+          </select>
+        </div>
+
+        <div className="bg-surface border border-border rounded-lg overflow-hidden">
+          {shiftsLoading ? (
+            <div className="p-8 text-center text-ink-muted text-sm">Loading shifts...</div>
+          ) : shiftsError ? (
+            <div className="p-8 text-center text-red-600 text-sm">
+              Failed to load staff shifts.
+            </div>
+          ) : filteredShifts.length === 0 ? (
+            <div className="p-8 text-center text-ink-muted text-sm">No staff shifts recorded yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-bg text-left">
+                    <th className="px-6 py-3 font-medium text-ink-muted">Staff member</th>
+                    <th className="px-6 py-3 font-medium text-ink-muted">Opened</th>
+                    <th className="px-6 py-3 font-medium text-ink-muted">Closed</th>
+                    <th className="px-6 py-3 font-medium text-ink-muted">Duration</th>
+                    <th className="px-6 py-3 font-medium text-ink-muted">Status</th>
+                    <th className="px-6 py-3 font-medium text-ink-muted text-right">Sales</th>
+                    <th className="px-6 py-3 font-medium text-ink-muted text-right">Revenue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredShifts.map((shift) => (
+                    <tr
+                      key={shift.shift_id}
+                      className="border-b border-border last:border-0 hover:bg-bg transition-colors"
+                    >
+                      <td className="px-6 py-3 font-medium text-ink">{shift.user_name}</td>
+                      <td className="px-6 py-3 text-ink">{formatDateTime(shift.opened_at)}</td>
+                      <td className="px-6 py-3 text-ink-muted">
+                        {shift.closed_at ? formatDateTime(shift.closed_at) : "—"}
+                      </td>
+                      <td className="px-6 py-3 text-ink-muted">
+                        {formatDuration(shift.opened_at, shift.closed_at)}
+                      </td>
+                      <td className="px-6 py-3">
+                        <span
+                          className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                            shift.status === "open"
+                              ? "bg-green-100 text-green-700 border-green-200"
+                              : "bg-gray-100 text-gray-500 border-gray-200"
+                          }`}
+                        >
+                          {shift.status === "open" ? "Open" : "Closed"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3 text-ink font-medium text-right">{shift.total_sales}</td>
+                      <td className="px-6 py-3 text-ink font-medium text-right">
+                        GH₵{shift.total_revenue.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </section>
+      {deactivateTarget && (
+        <ConfirmDialog
+          title="Deactivate this user?"
+          message={`${deactivateTarget.name} will lose access immediately, but their sales and shift history will be preserved.`}
+          confirmLabel="Deactivate"
+          onConfirm={() => deactivateMutation.mutate(deactivateTarget.userId)}
+          onCancel={() => setDeactivateTarget(null)}
+          isPending={deactivateMutation.isPending}
+        />
+      )}
     </div>
   );
 }
