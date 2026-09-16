@@ -4,6 +4,7 @@ import { getMedicines } from "../api/medicines";
 import { createSale } from "../api/sales";
 import type { MedicineWithStockResponse } from "../types/medicine";
 import type { SaleCreate, SaleResponse } from "../types/sale";
+import { getActiveShift } from "../api/shift";
 // -----------------------------
 // Types
 // -----------------------------
@@ -108,6 +109,37 @@ function POS() {
     checkoutMutation.mutate(saleData);
   };
 
+    const { data: activeShift, isLoading: shiftLoading } = useQuery({
+    queryKey: ["active-shift"],
+    queryFn: async () => {
+      try {
+        return await getActiveShift();
+      } catch (err: any) {
+        if (err?.response?.status === 404) return null;
+        throw err;
+      }
+    },
+    retry: false,
+  });
+
+  if (shiftLoading) return null;
+
+  if (!activeShift) {
+    return (
+      <div className="max-w-lg mx-auto">
+        <div className="bg-surface border border-border rounded-lg p-8 text-center">
+          <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-yellow-600 text-2xl">⚠</span>
+          </div>
+          <h2 className="font-display font-bold text-xl text-ink mb-2">No active shift</h2>
+          <p className="text-ink-muted text-sm">
+            You need to open a shift before making sales. Use the bar at the top of the page.
+          </p>
+        </div>
+      </div>
+    );
+  }
+  
   // Receipt view after successful sale
   if (completedSale) {
     return (

@@ -7,15 +7,18 @@ function ShiftBar() {
   const queryClient = useQueryClient();
   const [closedSummary, setClosedSummary] = useState<ShiftSummaryResponse | null>(null);
 
-  const {
-    data: activeShift,
-    isLoading,
-  } = useQuery({
+  const { data: activeShift, isLoading } = useQuery({
     queryKey: ["active-shift"],
-    queryFn: getActiveShift,
+    queryFn: async () => {
+      try {
+        return await getActiveShift();
+      } catch (err: any) {
+        // 404 = no active shift — valid state, not a real error
+        if (err?.response?.status === 404) return null;
+        throw err;
+      }
+    },
     retry: false,
-    // 404 means no active shift — that's a valid state, not an error
-    // we handle it by checking data === undefined
   });
 
   const openMutation = useMutation({
@@ -30,6 +33,8 @@ function ShiftBar() {
     mutationFn: closeShift,
     onSuccess: (summary) => {
       queryClient.invalidateQueries({ queryKey: ["active-shift"] });
+      queryClient.invalidateQueries({ queryKey: ["my-shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["all-shifts"] });
       setClosedSummary(summary);
     },
   });
@@ -46,25 +51,15 @@ function ShiftBar() {
 
   return (
     <>
-      <div
-        className={`px-6 py-2 flex items-center justify-between text-sm border-b ${
-          hasActiveShift
-            ? "bg-green-50 border-green-200"
-            : "bg-yellow-50 border-yellow-200"
-        }`}
-      >
+      <div className={`px-6 py-2 flex items-center justify-between text-sm border-b ${
+        hasActiveShift ? "bg-green-50 border-green-200" : "bg-yellow-50 border-yellow-200"
+      }`}>
         <div className="flex items-center gap-2">
-          <span
-            className={`w-2 h-2 rounded-full ${
-              hasActiveShift ? "bg-green-500" : "bg-yellow-500"
-            }`}
-          />
+          <span className={`w-2 h-2 rounded-full ${hasActiveShift ? "bg-green-500" : "bg-yellow-500"}`} />
           {hasActiveShift ? (
             <span className="text-green-700">
               Shift open since{" "}
-              <span className="font-medium">
-                {formatTime(activeShift.opened_at)}
-              </span>
+              <span className="font-medium">{formatTime(activeShift!.opened_at)}</span>
             </span>
           ) : (
             <span className="text-yellow-700">
@@ -94,19 +89,15 @@ function ShiftBar() {
         </div>
       </div>
 
-      {/* Closed shift summary banner */}
       {closedSummary && (
         <div className="px-6 py-3 bg-blue-50 border-b border-blue-200 flex items-center justify-between text-sm">
           <span className="text-blue-700">
             Shift closed —{" "}
             <span className="font-medium">
-              {closedSummary.total_sales} sale
-              {closedSummary.total_sales !== 1 ? "s" : ""}
+              {closedSummary.total_sales} sale{closedSummary.total_sales !== 1 ? "s" : ""}
             </span>{" "}
             totalling{" "}
-            <span className="font-medium">
-              GH₵{closedSummary.total_revenue.toFixed(2)}
-            </span>{" "}
+            <span className="font-medium">GH₵{closedSummary.total_revenue.toFixed(2)}</span>{" "}
             for this session.
           </span>
           <button

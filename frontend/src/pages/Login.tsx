@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import "./Login.css";
 
 function Login() {
   const { login } = useAuth();
@@ -32,63 +33,71 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-sm bg-white p-8 rounded-lg shadow">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Cliencia Pharmacy</h1>
-        <p className="text-sm text-gray-500 mb-6">Sign in to your account</p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+    <main className="login-page">
+      <section className="login-shell" aria-label="Cliencia Pharmacy login">
+        <div className="login-art" aria-hidden="true">
+          <div className="login-brand">
+            <span className="brand-mark">✚</span>
+            <span>CLIENCIA<br /><strong>PHARMACY</strong></span>
           </div>
+          <div className="art-caption">A simpler way to manage<br />every prescription.</div>
+        </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+        <div className="login-panel">
+          <div className="login-panel-inner">
+            <p className="login-eyebrow">Welcome back</p>
+            <h1>Login</h1>
+            <p className="login-subtitle">Sign in to continue to your pharmacy workspace.</p>
 
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
-              {error}
+            <form onSubmit={handleSubmit} className="login-form">
+              <div className="login-field">
+                <label htmlFor="email">Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                />
+              </div>
+
+              <div className="login-field">
+                <label htmlFor="password">Password</label>
+                <input
+                  id="password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                />
+              </div>
+
+              <div className="login-options">
+                <label className="remember-option">
+                  <input type="checkbox" />
+                  <span>Remember me</span>
+                </label>
+                <button type="button" className="forgot-link">Forgot password?</button>
+              </div>
+
+              {error && <p className="login-error" role="alert">{error}</p>}
+
+              <button type="submit" disabled={isSubmitting} className="login-submit">
+                {isSubmitting ? "Signing in..." : "Login to Pharmacy"}
+                <span aria-hidden="true">→</span>
+              </button>
+            </form>
+
+            <p className="register-prompt">
+              Don&apos;t have an account? <Link to="/register">Register now</Link>
             </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full bg-blue-600 text-white py-2 rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
-
-        <p className="text-sm text-gray-500 mt-6 text-center">
-          Don't have an account?{" "}
-          <Link to="/register" className="text-blue-600 hover:underline">
-            Register
-          </Link>
-        </p>
-      </div>
-    </div>
+          </div>
+          <p className="login-footer">Secure access for authorized pharmacy staff</p>
+        </div>
+      </section>
+    </main>
   );
 }
 

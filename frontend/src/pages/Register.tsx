@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { registerUser } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
+import "./Login.css";
 
 function Register() {
   const navigate = useNavigate();
@@ -44,93 +45,88 @@ function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-sm bg-white p-8 rounded-lg shadow">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Cliencia Pharmacy</h1>
-        <p className="text-sm text-gray-500 mb-6">Create your account</p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
-                First name
-              </label>
-              <input
-                id="firstName"
-                type="text"
-                required
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
-                Last name
-              </label>
-              <input
-                id="lastName"
-                type="text"
-                required
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+    <main className="login-page register-page">
+      <section className="login-shell" aria-label="Create a Cliencia Pharmacy account">
+        <div className="login-art" aria-hidden="true">
+          <div className="login-brand">
+            <span className="brand-mark">✚</span>
+            <span>CLIENCIA<br /><strong>PHARMACY</strong></span>
           </div>
+          <div className="art-caption">Join a better way to manage<br />every prescription.</div>
+        </div>
 
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+        <div className="login-panel">
+          <div className="login-panel-inner">
+            <p className="login-eyebrow">Get started</p>
+            <h1>Create account</h1>
+            <p className="login-subtitle">Set up your staff account and start managing your pharmacy.</p>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+            <form onSubmit={handleSubmit} className="login-form">
+              <div className="register-name-fields">
+                <div className="login-field">
+                  <label htmlFor="firstName">First name</label>
+                  <input
+                    id="firstName"
+                    type="text"
+                    required
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="First name"
+                  />
+                </div>
+                <div className="login-field">
+                  <label htmlFor="lastName">Last name</label>
+                  <input
+                    id="lastName"
+                    type="text"
+                    required
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Last name"
+                  />
+                </div>
+              </div>
 
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
-              {error}
+              <div className="login-field">
+                <label htmlFor="email">Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                />
+              </div>
+
+              <div className="login-field">
+                <label htmlFor="password">Password</label>
+                <input
+                  id="password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Create a password"
+                />
+              </div>
+
+              {error && <p className="login-error" role="alert">{error}</p>}
+
+              <button type="submit" disabled={isSubmitting} className="login-submit">
+                {isSubmitting ? "Creating account..." : "Create account"}
+                <span aria-hidden="true">→</span>
+              </button>
+            </form>
+
+            <p className="register-prompt">
+              Already have an account? <Link to="/login">Sign in</Link>
             </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full bg-blue-600 text-white py-2 rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? "Creating account..." : "Create account"}
-          </button>
-        </form>
-
-        <p className="text-sm text-gray-500 mt-6 text-center">
-          Already have an account?{" "}
-          <Link to="/login" className="text-blue-600 hover:underline">
-            Sign in
-          </Link>
-        </p>
-      </div>
-    </div>
+          </div>
+          <p className="login-footer">Secure access for authorized pharmacy staff</p>
+        </div>
+      </section>
+    </main>
   );
 }
 
