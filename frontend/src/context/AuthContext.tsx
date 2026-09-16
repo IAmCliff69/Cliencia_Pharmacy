@@ -13,6 +13,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (credentials: UserLogin) => Promise<void>;
+  refreshProfile: () => Promise<UserResponse>;
   logout: () => void;
 }
 
@@ -54,6 +55,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(profile);
   };
 
+  const refreshProfile = async () => {
+    const profile = await getMyProfile();
+    setUser(profile);
+    return profile;
+  };
+
   const logout = () => {
     localStorage.removeItem("access_token");
     setUser(null);
@@ -64,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     isAuthenticated: user !== null,
     login,
+    refreshProfile,
     logout,
   };
 

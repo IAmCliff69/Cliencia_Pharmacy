@@ -40,6 +40,11 @@ class User(Base):
         nullable=False
     )
 
+    profile_image_url = Column(
+        String(500),
+        nullable=True
+    )
+
     created_at = Column(
         DateTime,
         default=datetime.utcnow

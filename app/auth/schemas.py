@@ -37,6 +37,7 @@ class UserResponse(BaseModel):
     email: EmailStr
     role: str
     is_active: bool
+    profile_image_url: str | None = None
 
 
     class Config:

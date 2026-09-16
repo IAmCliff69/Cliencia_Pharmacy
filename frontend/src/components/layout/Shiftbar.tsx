@@ -51,7 +51,7 @@ function ShiftBar() {
 
   return (
     <>
-      <div className={`px-6 py-2 flex items-center justify-between text-sm border-b ${
+      <div className={`px-8 py-2.5 flex items-center justify-between text-xs border-b ${
         hasActiveShift ? "bg-green-50 border-green-200" : "bg-yellow-50 border-yellow-200"
       }`}>
         <div className="flex items-center gap-2">

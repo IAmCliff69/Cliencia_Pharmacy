@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getLowStockMedicines, getExpiringMedicines, getExpiredMedicines } from "../api/medicines";
 import { getSalesSummary } from "../api/reports";
+import pharmacyImage from "../assets/Pharmacy Task Automation_ Daily Operations to Patient Care.jpeg";
 
 // -----------------------------
 // Stat card
@@ -89,6 +90,14 @@ function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const today = new Date().toISOString().split("T")[0];
+  const userInitials = user
+    ? `${user.first_name.charAt(0)}${user.last_name.charAt(0)}`.toUpperCase()
+    : "CP";
+  const welcomeDate = new Date().toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 
   const { data: lowStock = [], isLoading: loadingLow } = useQuery({
     queryKey: ["medicines-low-stock"],
@@ -116,14 +125,36 @@ function Dashboard() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="font-display font-bold text-2xl text-ink">
-          Welcome back{user ? `, ${user.first_name}` : ""}
-        </h1>
-        <p className="text-ink-muted text-sm mt-1">
-          Here's what's happening in your pharmacy today.
-        </p>
+      {/* Welcome hero */}
+      <div className="relative mb-6 min-h-[178px] overflow-hidden rounded-2xl bg-[#123f52] shadow-sm">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: `url("${user?.profile_image_url ?? pharmacyImage}")`,
+          }}
+          aria-hidden="true"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#123f52] via-[#123f52]/90 to-[#123f52]/20" />
+        <div className="relative z-10 flex min-h-[178px] items-center justify-between px-7 py-6">
+          <div>
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8ae4fa]">
+              {welcomeDate}
+            </p>
+            <h1 className="font-display text-3xl font-bold tracking-tight text-white">
+              Welcome back{user ? `, ${user.first_name}` : ""}!
+            </h1>
+            <p className="mt-2 text-sm text-[#c6e2dc]">
+              Here&apos;s what&apos;s happening in your pharmacy today.
+            </p>
+          </div>
+          <div className="hidden h-14 w-14 shrink-0 place-items-center rounded-full border-4 border-white/40 bg-[#da275a] text-lg font-bold text-white shadow-lg sm:grid">
+            {user?.profile_image_url ? (
+              <img src={user.profile_image_url} alt="Your profile" className="h-full w-full rounded-full object-cover" />
+            ) : (
+              userInitials
+            )}
+          </div>
+        </div>
       </div>
 
       {isLoading ? (

@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from pathlib import Path
+from uuid import uuid4
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -14,6 +17,13 @@ router = APIRouter(
     tags=["Authentication"]
 )
 
+UPLOAD_DIR = Path(__file__).resolve().parents[2] / "uploads"
+ALLOWED_IMAGE_TYPES = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
+
 
 # -----------------------------
 # Register User
@@ -24,10 +34,36 @@ router = APIRouter(
     response_model=schemas.UserResponse,
     status_code=status.HTTP_201_CREATED
 )
-def register(
-    user: schemas.UserCreate,
+async def register(
+    request: Request,
+    first_name: str = Form(...),
+    last_name: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    image: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
+
+    extension = ALLOWED_IMAGE_TYPES.get(image.content_type or "")
+    if not extension:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A JPG, PNG, or WEBP profile image is required.",
+        )
+
+    contents = await image.read()
+    if len(contents) > 5 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Profile images must be 5 MB or smaller.",
+        )
+
+    user = schemas.UserCreate(
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        password=password,
+    )
 
     try:
         new_user = service.register_user(db, user)
@@ -37,6 +73,13 @@ def register(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="An account with this email already exists"
         )
+
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    filename = f"profile-{new_user.user_id}-{uuid4().hex}{extension}"
+    (UPLOAD_DIR / filename).write_bytes(contents)
+    new_user.profile_image_url = f"{str(request.base_url).rstrip('/')}/uploads/{filename}"
+    db.commit()
+    db.refresh(new_user)
 
     return new_user
 
@@ -120,6 +163,38 @@ def promote_to_admin(
 def get_my_profile(
     current_user: User = Depends(require_staff)
 ):
+    return current_user
+
+
+@router.post("/me/profile-image", response_model=schemas.UserResponse)
+async def upload_profile_image(
+    request: Request,
+    image: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff),
+):
+    extension = ALLOWED_IMAGE_TYPES.get(image.content_type or "")
+    if not extension:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only JPG, PNG, and WEBP images are supported.",
+        )
+
+    contents = await image.read()
+    if len(contents) > 5 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Profile images must be 5 MB or smaller.",
+        )
+
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    filename = f"profile-{current_user.user_id}-{uuid4().hex}{extension}"
+    file_path = UPLOAD_DIR / filename
+    file_path.write_bytes(contents)
+
+    current_user.profile_image_url = f"{str(request.base_url).rstrip('/')}/uploads/{filename}"
+    db.commit()
+    db.refresh(current_user)
     return current_user
 
 

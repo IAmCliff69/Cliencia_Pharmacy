@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import logo from "../assets/Logo.svg";
 import "./Login.css";
 
 function Login() {
@@ -37,7 +38,7 @@ function Login() {
       <section className="login-shell" aria-label="Cliencia Pharmacy login">
         <div className="login-art" aria-hidden="true">
           <div className="login-brand">
-            <span className="brand-mark">✚</span>
+            <img src={logo} alt="Cliencia Pharmacy" className="auth-logo" />
             <span>CLIENCIA<br /><strong>PHARMACY</strong></span>
           </div>
           <div className="art-caption">A simpler way to manage<br />every prescription.</div>

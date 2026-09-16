@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #0f766e;
-  --color-primary-dark: #0b5c56;
-  --color-primary-light: #14b8a6;
+  --color-primary: #2fc9f4;
+  --color-primary-dark: #159bc4;
+  --color-primary-light: #8ae4fa;
 
-  --color-bg: #f7f9f9;
+  --color-bg: #eef2f1;
   --color-surface: #ffffff;
 
-  --color-ink: #1e293b;
-  --color-ink-muted: #64748b;
-  --color-border: #e2e8f0;
+  --color-ink: #153846;
+  --color-ink-muted: #6b818b;
+  --color-border: #d9e8ed;
 
   --color-warning: #d97706;
-  --color-danger: #dc2626;
+  --color-danger: #da275a;
   --color-success: #16a34a;
 
   --font-display: "Manrope", "Inter", system-ui, sans-serif;
@@ -24,4 +24,46 @@ body {
   font-family: var(--font-body);
   background-color: var(--color-bg);
   color: var(--color-ink);
+  margin: 0;
+  overflow-x: hidden;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+html.dark {
+  --color-bg: #102b3a;
+  --color-surface: #173f50;
+  --color-ink: #e8f8fc;
+  --color-ink-muted: #a8c2ca;
+  --color-border: #2b5b6c;
+  --color-warning: #f3bd54;
+  --color-danger: #f47798;
+  --color-success: #63d9a1;
+}
+
+html.dark body {
+  background-color: var(--color-bg);
+}
+
+html.dark .bg-gray-100 {
+  background-color: #214b5b;
+}
+
+html.dark .text-gray-500 {
+  color: var(--color-ink-muted);
+}
+
+html.dark .border-gray-200 {
+  border-color: var(--color-border);
 }

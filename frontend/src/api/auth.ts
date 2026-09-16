@@ -7,9 +7,18 @@ import type {
 } from "../types/auth";
 
 export const registerUser = async (
-  data: UserCreate
+  data: UserCreate,
+  image: File
 ): Promise<UserResponse> => {
-  const response = await api.post<UserResponse>("/auth/register", data);
+  const formData = new FormData();
+  formData.append("first_name", data.first_name);
+  formData.append("last_name", data.last_name);
+  formData.append("email", data.email);
+  formData.append("password", data.password);
+  formData.append("image", image);
+  const response = await api.post<UserResponse>("/auth/register", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
   return response.data;
 };
 
@@ -50,5 +59,14 @@ export const reactivateUser = async (
   const response = await api.patch<UserResponse>(
     `/auth/users/${userId}/activate`
   );
+  return response.data;
+};
+
+export const uploadProfileImage = async (file: File): Promise<UserResponse> => {
+  const formData = new FormData();
+  formData.append("image", file);
+  const response = await api.post<UserResponse>("/auth/me/profile-image", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
   return response.data;
 };

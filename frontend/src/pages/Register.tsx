@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { registerUser } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
+import logo from "../assets/Logo.svg";
 import "./Login.css";
 
 function Register() {
@@ -12,12 +13,17 @@ function Register() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [profileImage, setProfileImage] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (!profileImage) {
+      setError("Please choose a profile image to create your account.");
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -26,7 +32,7 @@ function Register() {
         last_name: lastName,
         email,
         password,
-      });
+      }, profileImage);
 
       // Registration succeeded but doesn't log the user in by itself
       // (your /auth/register endpoint just creates the account) —
@@ -49,7 +55,7 @@ function Register() {
       <section className="login-shell" aria-label="Create a Cliencia Pharmacy account">
         <div className="login-art" aria-hidden="true">
           <div className="login-brand">
-            <span className="brand-mark">✚</span>
+            <img src={logo} alt="Cliencia Pharmacy" className="auth-logo" />
             <span>CLIENCIA<br /><strong>PHARMACY</strong></span>
           </div>
           <div className="art-caption">Join a better way to manage<br />every prescription.</div>
@@ -109,6 +115,19 @@ function Register() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Create a password"
                 />
+              </div>
+
+              <div className="login-field">
+                <label htmlFor="profileImage">Profile image</label>
+                <input
+                  id="profileImage"
+                  type="file"
+                  required
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(e) => setProfileImage(e.target.files?.[0] ?? null)}
+                  className="register-file-input"
+                />
+                <span className="register-file-help">JPG, PNG, or WEBP up to 5 MB</span>
               </div>
 
               {error && <p className="login-error" role="alert">{error}</p>}

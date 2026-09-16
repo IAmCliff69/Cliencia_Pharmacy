@@ -19,6 +19,7 @@ export interface UserResponse {
   email: string;
   role: "staff" | "admin";
   is_active: boolean;
+  profile_image_url?: string | null;
 }
 
 export interface LoginResponse {

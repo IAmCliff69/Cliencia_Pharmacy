@@ -1,4 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Query
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -37,6 +39,9 @@ app = FastAPI(
     description="Pharmacy Inventory Management System API",
     version="1.0.0"
 )
+
+Path("uploads").mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 # -----------------------------
