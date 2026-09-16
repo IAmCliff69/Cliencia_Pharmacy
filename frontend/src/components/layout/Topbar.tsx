@@ -20,7 +20,7 @@ function Topbar() {
   };
 
   return (
-    <header className="relative isolate z-40 h-[70px] shrink-0 bg-[var(--color-bg)] flex items-center justify-between px-8 sticky top-0 shadow-sm">
+    <header className="relative isolate z-40 h-[70px] shrink-0 bg-bg flex items-center justify-between px-8 sticky top-0">
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Operations overview</p>
         <p className="text-xs text-ink-muted mt-1">Keep today&apos;s pharmacy running smoothly.</p>

@@ -2,14 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getActiveShift, openShift, closeShift } from "../../api/shift";
 import { useState } from "react";
 import type { ShiftSummaryResponse } from "../../types/shift";
-import ConfirmDialog from "../ConfirmDialog";
-import { useToast } from "../../context/ToastContext";
 
 function ShiftBar() {
   const queryClient = useQueryClient();
   const [closedSummary, setClosedSummary] = useState<ShiftSummaryResponse | null>(null);
-  const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false);
-  const { showToast } = useToast();
 
   const { data: activeShift, isLoading } = useQuery({
     queryKey: ["active-shift"],
@@ -30,10 +26,6 @@ function ShiftBar() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["active-shift"] });
       setClosedSummary(null);
-      showToast("Shift opened successfully.", "success");
-    },
-    onError: (error: any) => {
-      showToast(error?.response?.data?.detail ?? "Could not open the shift.", "error");
     },
   });
 
@@ -44,11 +36,6 @@ function ShiftBar() {
       queryClient.invalidateQueries({ queryKey: ["my-shifts"] });
       queryClient.invalidateQueries({ queryKey: ["all-shifts"] });
       setClosedSummary(summary);
-      setIsCloseDialogOpen(false);
-      showToast("Shift closed successfully.", "success");
-    },
-    onError: (error: any) => {
-      showToast(error?.response?.data?.detail ?? "Could not close the shift.", "error");
     },
   });
 
@@ -64,7 +51,7 @@ function ShiftBar() {
 
   return (
     <>
-      <div className="px-8 py-2.5 flex items-center justify-between text-xs bg-bg">
+      <div className="flex min-h-12 items-center justify-between gap-4 bg-surface/70 px-6 py-2 text-xs shadow-[0_1px_0_rgba(21,56,70,0.04)] backdrop-blur-sm sm:px-8">
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${hasActiveShift ? "bg-green-500" : "bg-yellow-500"}`} />
           {hasActiveShift ? (
@@ -79,12 +66,12 @@ function ShiftBar() {
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3">
           {hasActiveShift ? (
             <button
-              onClick={() => setIsCloseDialogOpen(true)}
+              onClick={() => closeMutation.mutate()}
               disabled={closeMutation.isPending}
-              className="text-xs font-medium px-3 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
+              className="rounded-full bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-500/20 disabled:opacity-50"
             >
               {closeMutation.isPending ? "Closing..." : "Close shift"}
             </button>
@@ -92,7 +79,7 @@ function ShiftBar() {
             <button
               onClick={() => openMutation.mutate()}
               disabled={openMutation.isPending}
-              className="text-xs font-medium px-3 py-1 rounded border border-green-300 text-green-700 hover:bg-green-100 disabled:opacity-50 transition-colors"
+              className="rounded-full bg-green-500/10 px-3 py-1.5 text-xs font-semibold text-green-700 transition-colors hover:bg-green-500/20 disabled:opacity-50"
             >
               {openMutation.isPending ? "Opening..." : "Open shift"}
             </button>
@@ -101,7 +88,7 @@ function ShiftBar() {
       </div>
 
       {closedSummary && (
-        <div className="px-6 py-3 bg-bg flex items-center justify-between text-sm">
+        <div className="flex items-center justify-between gap-4 bg-surface/70 px-6 py-3 text-sm sm:px-8">
           <span className="text-blue-700">
             Shift closed —{" "}
             <span className="font-medium">
@@ -118,16 +105,6 @@ function ShiftBar() {
             ×
           </button>
         </div>
-      )}
-      {isCloseDialogOpen && (
-        <ConfirmDialog
-          title="Close this shift?"
-          message="The shift will be marked closed and its sales totals will be finalized."
-          confirmLabel="Close shift"
-          onConfirm={() => closeMutation.mutate()}
-          onCancel={() => setIsCloseDialogOpen(false)}
-          isPending={closeMutation.isPending}
-        />
       )}
     </>
   );

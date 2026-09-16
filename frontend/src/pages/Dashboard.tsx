@@ -131,7 +131,7 @@ function Dashboard() {
   return (
     <div>
       {/* Welcome hero */}
-      <div className="relative mb-6 min-h-[178px] overflow-hidden rounded-2xl bg-[var(--color-brand)] shadow-sm">
+      <div className="relative mb-6 min-h-[178px] overflow-hidden rounded-2xl bg-[#123b4a] shadow-sm">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
@@ -139,16 +139,16 @@ function Dashboard() {
           }}
           aria-hidden="true"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-brand)] via-[var(--color-brand)]/90 to-[var(--color-brand)]/20" />
-        <div className="relative z-10 flex min-h-[178px] items-center justify-between px-7 py-6">
-          <div>
+        <div className="absolute inset-0 bg-gradient-to-r from-[#123b4a] via-[#123b4a]/95 to-[#123b4a]/55" />
+        <div className="relative z-10 flex min-h-[178px] items-center justify-between gap-5 px-6 py-6 sm:px-7">
+          <div className="min-w-0">
             <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8ae4fa]">
               {welcomeDate}
             </p>
-            <h1 className="font-display text-3xl font-bold tracking-tight text-white">
+            <h1 className="font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
               Welcome back{user ? `, ${user.first_name}` : ""}!
             </h1>
-            <p className="mt-2 text-sm text-[#c6e2dc]">
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/85">
               Here&apos;s what&apos;s happening in your pharmacy today.
             </p>
           </div>
