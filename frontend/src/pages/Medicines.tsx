@@ -13,6 +13,8 @@ import type { MedicineWithStockResponse, MedicineCreate } from "../types/medicin
 import type { CategoryResponse } from "../types/category";
 import type { SupplierResponse } from "../types/supplier";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 // -----------------------------
 // Helpers
@@ -30,6 +32,18 @@ function getStockStatus(medicine: MedicineWithStockResponse) {
   if (daysToExpiry <= 30) return "expiring";
   if (qty <= minStock) return "low-stock";
   return "ok";
+}
+
+function getExpiryWarning(expiryDate: string) {
+  const today = new Date();
+  const expiry = new Date(expiryDate);
+  const daysToExpiry = Math.ceil(
+    (expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  if (daysToExpiry < 0) return "Expired";
+  if (daysToExpiry <= 30) return `${daysToExpiry} day${daysToExpiry === 1 ? "" : "s"} left`;
+  return null;
 }
 
 type StockStatus = "expired" | "expiring" | "low-stock" | "ok";
@@ -63,6 +77,7 @@ function Medicines() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
 
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState<number | undefined>();
@@ -101,6 +116,7 @@ function Medicines() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["medicines"] });
       closeForm();
+      showToast("Medicine created.", "success");
     },
     onError: (err: any) => {
       setFormError(err?.response?.data?.detail ?? "Failed to create medicine.");
@@ -113,6 +129,7 @@ function Medicines() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["medicines"] });
       closeForm();
+      showToast("Medicine updated.", "success");
     },
     onError: (err: any) => {
       setFormError(err?.response?.data?.detail ?? "Failed to update medicine.");
@@ -124,6 +141,10 @@ function Medicines() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["medicines"] });
       setDeleteTarget(null);
+      showToast("Medicine deleted.", "success");
+    },
+    onError: (err: any) => {
+      showToast(err?.response?.data?.detail ?? "Failed to delete medicine.", "error");
     },
   });
 
@@ -133,6 +154,10 @@ function Medicines() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["medicines"] });
       setStockTarget(null);
+      showToast("Stock updated.", "success");
+    },
+    onError: (err: any) => {
+      showToast(err?.response?.data?.detail ?? "Failed to update stock.", "error");
     },
   });
 
@@ -284,11 +309,18 @@ function Medicines() {
               <tbody>
                 {medicines.map((med) => {
                   const status = getStockStatus(med);
+                  const expiryWarning = getExpiryWarning(med.expiry_date);
                   const medId = med.medicine_id;
                   return (
                     <tr
                       key={medId}
-                      className="border-b border-border last:border-0 hover:bg-bg transition-colors"
+                      className={`border-b border-border last:border-0 transition-colors ${
+                        expiryWarning === "Expired"
+                          ? "bg-red-50/70 hover:bg-red-100/70"
+                          : expiryWarning
+                            ? "bg-yellow-50/70 hover:bg-yellow-100/70"
+                            : "hover:bg-bg"
+                      }`}
                     >
                       <td className="px-6 py-3 font-medium text-ink">
                         {med.medicine_name}
@@ -309,7 +341,18 @@ function Medicines() {
                         </span>
                       </td>
                       <td className="px-6 py-3 text-ink-muted">
-                        {med.expiry_date}
+                        <div>{med.expiry_date}</div>
+                        {expiryWarning && (
+                          <span
+                            className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${
+                              expiryWarning === "Expired"
+                                ? "border-red-200 bg-red-100 text-red-700"
+                                : "border-yellow-200 bg-yellow-100 text-yellow-800"
+                            }`}
+                          >
+                            {expiryWarning}
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-3">
                         <StatusBadge status={status} />
@@ -370,12 +413,13 @@ function Medicines() {
       )}
 
       {deleteTarget !== null && (
-        <ConfirmDeleteModal
-          medicineName={deleteTarget.medicine_name}
-          medicineId={deleteTarget.medicine_id}
-          onConfirm={handleDelete}
+        <ConfirmDialog
+          title="Delete this medicine?"
+          message={`${deleteTarget.medicine_name} will be permanently removed from the inventory.`}
+          confirmLabel="Delete medicine"
+          onConfirm={() => handleDelete(deleteTarget.medicine_id)}
           onCancel={() => setDeleteTarget(null)}
-          isDeleting={deleteMutation.isPending}
+          isPending={deleteMutation.isPending}
         />
       )}
 
@@ -667,53 +711,6 @@ function AdjustStockModal({
             className="bg-primary text-white text-sm font-medium px-4 py-2 rounded-md hover:bg-primary-dark disabled:opacity-50 transition-colors"
           >
             {isSubmitting ? "Saving..." : "Apply"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// -----------------------------
-// Delete confirmation
-// -----------------------------
-function ConfirmDeleteModal({
-  medicineName,
-  medicineId,
-  onConfirm,
-  onCancel,
-  isDeleting,
-}: {
-  medicineName: string;
-  medicineId: number;
-  onConfirm: (id: number) => void;
-  onCancel: () => void;
-  isDeleting: boolean;
-}) {
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-surface rounded-lg shadow-lg w-full max-w-sm p-6">
-        <h2 className="font-display font-bold text-lg text-ink mb-2">
-          Delete medicine?
-        </h2>
-        <p className="text-sm text-ink-muted mb-6">
-          Are you sure you want to delete{" "}
-          <span className="font-medium text-ink">{medicineName}</span>? This
-          can't be undone.
-        </p>
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-ink-muted hover:text-ink transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => onConfirm(medicineId)}
-            disabled={isDeleting}
-            className="bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-md hover:opacity-90 disabled:opacity-50 transition-colors"
-          >
-            {isDeleting ? "Deleting..." : "Delete"}
           </button>
         </div>
       </div>

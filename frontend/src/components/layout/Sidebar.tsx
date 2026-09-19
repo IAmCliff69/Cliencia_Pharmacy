@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import logo from "../../assets/Logo.svg";
+
 interface NavItem {
   label: string;
   to: string;
@@ -40,16 +41,34 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
   );
 
   return (
-    <aside className={`fixed inset-y-0 left-0 z-40 w-[clamp(6rem,8vw,7.5rem)] bg-bg text-ink transition-transform md:relative md:z-auto md:translate-x-0 md:sticky ${isOpen ? "translate-x-0" : "-translate-x-full"} flex h-screen shrink-0 flex-col`}>
-      <div className="flex flex-col items-center gap-0.5 px-2 py-3">
-        <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/15">
-          <img src={logo} alt="Cliencia Pharmacy" className="h-10 w-10 object-contain" />
-        </div>
-        <span className="font-display font-bold text-sm tracking-tight">Cliencia</span>
-        <span className="text-[9px] text-ink-muted text-center leading-tight">Pharmacy Inventory</span>
+    <aside
+      className={`fixed inset-y-0 left-0 z-40 w-[clamp(6rem,8vw,7.5rem)] bg-bg text-ink transition-transform md:relative md:z-auto md:translate-x-0 md:sticky ${
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      } flex h-screen shrink-0 flex-col`}
+    >
+      {/* Brand area — no box, no border */}
+      <div className="flex flex-col items-center gap-1 px-3 pt-5 pb-3">
+        <img
+          src={logo}
+          alt="Cliencia Pharmacy"
+          className="h-14 w-14 object-contain drop-shadow-sm"
+        />
+        <span
+          className="font-display font-extrabold text-[11px] text-primary uppercase leading-tight text-center"
+          style={{ letterSpacing: "0.18em" }}
+        >
+          Cliencia
+        </span>
+        <span className="text-[8.5px] text-ink-muted text-center leading-tight tracking-wide uppercase">
+          Pharmacy
+        </span>
       </div>
 
-      <nav aria-label="Main navigation" className="flex flex-1 flex-col justify-start gap-1 px-2 py-2 pb-4">
+      {/* Nav */}
+      <nav
+        aria-label="Main navigation"
+        className="flex flex-1 flex-col justify-start gap-1 px-2 py-3 pb-4"
+      >
         {visibleItems.map((item) => (
           <NavLink
             key={item.to}
@@ -65,11 +84,10 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
               }`
             }
           >
-            <item.icon size={25} strokeWidth={1.8} aria-hidden="true" />
+            <item.icon size={22} strokeWidth={1.8} aria-hidden="true" />
           </NavLink>
         ))}
       </nav>
-
     </aside>
   );
 }

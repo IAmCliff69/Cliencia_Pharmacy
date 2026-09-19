@@ -1,6 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   listUsers,
+  getPendingUsers,
+  approveUser,
+  rejectUser,
   promoteToAdmin,
   deactivateUser,
   reactivateUser,
@@ -21,6 +24,7 @@ function Users() {
   const [shiftSearch, setShiftSearch] = useState("");
   const [shiftStatusFilter, setShiftStatusFilter] = useState("all");
   const [deactivateTarget, setDeactivateTarget] = useState<{ userId: number; name: string } | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<{ userId: number; name: string } | null>(null);
   const { showToast } = useToast();
 
   const { data: users = [], isLoading, isError } = useQuery({
@@ -28,13 +32,39 @@ function Users() {
     queryFn: listUsers,
   });
 
-  const {
-    data: allShifts = [],
-    isLoading: shiftsLoading,
-    isError: shiftsError,
-  } = useQuery({
+  const { data: pendingUsers = [], isLoading: pendingLoading } = useQuery({
+    queryKey: ["pending-users"],
+    queryFn: getPendingUsers,
+  });
+
+  const { data: allShifts = [], isLoading: shiftsLoading, isError: shiftsError } = useQuery({
     queryKey: ["all-shifts"],
     queryFn: getAllShifts,
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (userId: number) => approveUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pending-users"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      showToast("User approved and can now log in.", "success");
+    },
+    onError: (err: any) => {
+      setActionError(err?.response?.data?.detail ?? "Failed to approve user.");
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (userId: number) => rejectUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pending-users"] });
+      setRejectTarget(null);
+      showToast("Staff registration rejected.", "success");
+    },
+    onError: (err: any) => {
+      setActionError(err?.response?.data?.detail ?? "Failed to reject staff registration.");
+      showToast(err?.response?.data?.detail ?? "Failed to reject staff registration.", "error");
+    },
   });
 
   const promoteMutation = useMutation({
@@ -58,9 +88,7 @@ function Users() {
       showToast("User deactivated.", "success");
     },
     onError: (err: any) => {
-      setActionError(
-        err?.response?.data?.detail ?? "Failed to deactivate user."
-      );
+      setActionError(err?.response?.data?.detail ?? "Failed to deactivate user.");
     },
   });
 
@@ -72,31 +100,27 @@ function Users() {
       showToast("User reactivated.", "success");
     },
     onError: (err: any) => {
-      setActionError(
-        err?.response?.data?.detail ?? "Failed to reactivate user."
-      );
+      setActionError(err?.response?.data?.detail ?? "Failed to reactivate user.");
     },
   });
 
   const isActioning =
+    approveMutation.isPending ||
     promoteMutation.isPending ||
     deactivateMutation.isPending ||
     reactivateMutation.isPending;
 
   const formatDateTime = (dateStr: string) =>
     new Date(dateStr).toLocaleString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+      day: "2-digit", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
     });
 
   const formatDuration = (opened: string, closed: string | null) => {
     if (!closed) return "Still open";
-    const milliseconds = new Date(closed).getTime() - new Date(opened).getTime();
-    const hours = Math.floor(milliseconds / (1000 * 60 * 60));
-    const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60));
+    const ms = new Date(closed).getTime() - new Date(opened).getTime();
+    const hours = Math.floor(ms / (1000 * 60 * 60));
+    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
     return `${hours}h ${minutes}m`;
   };
 
@@ -123,6 +147,56 @@ function Users() {
         </p>
       </div>
 
+      {/* Pending approval section */}
+      {!pendingLoading && pendingUsers.length > 0 && (
+        <div className="mb-6 bg-surface border border-warning/40 rounded-lg overflow-hidden">
+          <div className="px-6 py-3 border-b border-border flex items-center gap-3">
+            <span className="w-2 h-2 rounded-full bg-warning shrink-0" />
+            <h2 className="font-display font-semibold text-ink text-sm">
+              Pending approval
+            </h2>
+            <span className="text-xs text-ink-muted">
+              {pendingUsers.length} account{pendingUsers.length !== 1 ? "s" : ""} awaiting activation
+            </span>
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-bg text-left">
+                <th className="px-6 py-3 font-medium text-ink-muted">Name</th>
+                <th className="px-6 py-3 font-medium text-ink-muted">Email</th>
+                <th className="px-6 py-3 font-medium text-ink-muted">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingUsers.map((u) => (
+                <tr key={u.user_id} className="border-b border-border last:border-0 hover:bg-bg transition-colors">
+                  <td className="px-6 py-3 font-medium text-ink">
+                    {u.first_name} {u.last_name}
+                  </td>
+                  <td className="px-6 py-3 text-ink-muted">{u.email}</td>
+                  <td className="px-6 py-3">
+                    <button
+                      onClick={() => approveMutation.mutate(u.user_id)}
+                      disabled={isActioning || rejectMutation.isPending}
+                      className="text-xs font-medium text-success hover:underline disabled:opacity-50"
+                    >
+                      {approveMutation.isPending ? "Approving..." : "Approve"}
+                    </button>
+                    <button
+                      onClick={() => setRejectTarget({ userId: u.user_id, name: `${u.first_name} ${u.last_name}` })}
+                      disabled={isActioning || rejectMutation.isPending}
+                      className="ml-3 text-xs font-medium text-danger hover:underline disabled:opacity-50"
+                    >
+                      Reject
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {actionError && (
         <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded px-4 py-3">
           {actionError}
@@ -130,28 +204,26 @@ function Users() {
       )}
 
       <div className="mb-4 flex flex-wrap gap-3">
-        <input value={userSearch} onChange={(event) => setUserSearch(event.target.value)} placeholder="Search users..." className="min-w-56 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-primary/40" />
-        <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink">
-          <option value="all">All roles</option><option value="staff">Staff</option><option value="admin">Admin</option>
+        <input value={userSearch} onChange={(e) => setUserSearch(e.target.value)} placeholder="Search users..." className="min-w-56 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-primary/40" />
+        <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink">
+          <option value="all">All roles</option>
+          <option value="staff">Staff</option>
+          <option value="admin">Admin</option>
         </select>
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink">
-          <option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink">
+          <option value="all">All statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
         </select>
       </div>
 
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center text-ink-muted text-sm">
-            Loading users...
-          </div>
+          <div className="p-8 text-center text-ink-muted text-sm">Loading users...</div>
         ) : isError ? (
-          <div className="p-8 text-center text-red-600 text-sm">
-            Failed to load users.
-          </div>
+          <div className="p-8 text-center text-red-600 text-sm">Failed to load users.</div>
         ) : filteredUsers.length === 0 ? (
-          <div className="p-8 text-center text-ink-muted text-sm">
-            No users found.
-          </div>
+          <div className="p-8 text-center text-ink-muted text-sm">No users found.</div>
         ) : (
           <table className="w-full text-sm">
             <thead>
@@ -160,93 +232,55 @@ function Users() {
                 <th className="px-6 py-3 font-medium text-ink-muted">Email</th>
                 <th className="px-6 py-3 font-medium text-ink-muted">Role</th>
                 <th className="px-6 py-3 font-medium text-ink-muted">Status</th>
-                <th className="px-6 py-3 font-medium text-ink-muted w-48">
-                  Actions
-                </th>
+                <th className="px-6 py-3 font-medium text-ink-muted w-48">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredUsers.map((u) => {
                 const isSelf = u.user_id === currentUser?.user_id;
                 return (
-                  <tr
-                    key={u.user_id}
-                    className="border-b border-border last:border-0 hover:bg-bg transition-colors"
-                  >
+                  <tr key={u.user_id} className="border-b border-border last:border-0 hover:bg-bg transition-colors">
                     <td className="px-6 py-3 font-medium text-ink">
                       {u.first_name} {u.last_name}
-                      {isSelf && (
-                        <span className="ml-2 text-xs text-ink-muted font-normal">
-                          (you)
-                        </span>
-                      )}
+                      {isSelf && <span className="ml-2 text-xs text-ink-muted font-normal">(you)</span>}
                     </td>
                     <td className="px-6 py-3 text-ink-muted">{u.email}</td>
                     <td className="px-6 py-3">
-                      <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
-                          u.role === "admin"
-                            ? "bg-primary/10 text-primary border-primary/20"
-                            : "bg-bg text-ink-muted border-border"
-                        }`}
-                      >
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                        u.role === "admin"
+                          ? "bg-primary/10 text-primary border-primary/20"
+                          : "bg-bg text-ink-muted border-border"
+                      }`}>
                         {u.role}
                       </span>
                     </td>
                     <td className="px-6 py-3">
-                      <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
-                          u.is_active
-                            ? "bg-green-100 text-green-700 border-green-200"
-                            : "bg-red-100 text-red-600 border-red-200"
-                        }`}
-                      >
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                        u.is_active
+                          ? "bg-green-100 text-green-700 border-green-200"
+                          : "bg-red-100 text-red-600 border-red-200"
+                      }`}>
                         {u.is_active ? "Active" : "Inactive"}
                       </span>
                     </td>
                     <td className="px-6 py-3">
                       <div className="flex gap-3 flex-wrap">
-                        {/* Promote — only for active staff, not self */}
                         {u.role === "staff" && u.is_active && !isSelf && (
-                          <button
-                            onClick={() => promoteMutation.mutate(u.user_id)}
-                            disabled={isActioning}
-                            className="text-primary hover:underline text-xs disabled:opacity-50"
-                          >
+                          <button onClick={() => promoteMutation.mutate(u.user_id)} disabled={isActioning} className="text-primary hover:underline text-xs disabled:opacity-50">
                             Promote
                           </button>
                         )}
-
-                        {/* Deactivate — only for active users, not self */}
                         {u.is_active && !isSelf && (
-                          <button
-                            onClick={() => setDeactivateTarget({ userId: u.user_id, name: `${u.first_name} ${u.last_name}` })}
-                            disabled={isActioning}
-                            className="text-red-600 hover:underline text-xs disabled:opacity-50"
-                          >
+                          <button onClick={() => setDeactivateTarget({ userId: u.user_id, name: `${u.first_name} ${u.last_name}` })} disabled={isActioning} className="text-red-600 hover:underline text-xs disabled:opacity-50">
                             Deactivate
                           </button>
                         )}
-
-                        {/* Reactivate — only for inactive users */}
                         {!u.is_active && (
-                          <button
-                            onClick={() =>
-                              reactivateMutation.mutate(u.user_id)
-                            }
-                            disabled={isActioning}
-                            className="text-green-600 hover:underline text-xs disabled:opacity-50"
-                          >
+                          <button onClick={() => reactivateMutation.mutate(u.user_id)} disabled={isActioning} className="text-green-600 hover:underline text-xs disabled:opacity-50">
                             Reactivate
                           </button>
                         )}
-
-                        {/* Self — no actions */}
-                        {isSelf && (
-                          <span className="text-xs text-ink-muted">
-                            —
-                          </span>
-                        )}
+                        {isSelf && <span className="text-xs text-ink-muted">—</span>}
                       </div>
                     </td>
                   </tr>
@@ -260,15 +294,15 @@ function Users() {
       <section className="mt-8">
         <div className="mb-4">
           <h2 className="font-display font-bold text-xl text-ink">Staff Shift Activity</h2>
-          <p className="text-ink-muted text-sm mt-1">
-            View every shift opened and closed by staff members.
-          </p>
+          <p className="text-ink-muted text-sm mt-1">View every shift opened and closed by staff members.</p>
         </div>
 
         <div className="mb-4 flex flex-wrap gap-3">
-          <input value={shiftSearch} onChange={(event) => setShiftSearch(event.target.value)} placeholder="Search by staff member..." className="min-w-56 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-primary/40" />
-          <select value={shiftStatusFilter} onChange={(event) => setShiftStatusFilter(event.target.value)} className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink">
-            <option value="all">All shift statuses</option><option value="open">Open</option><option value="closed">Closed</option>
+          <input value={shiftSearch} onChange={(e) => setShiftSearch(e.target.value)} placeholder="Search by staff member..." className="min-w-56 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-primary/40" />
+          <select value={shiftStatusFilter} onChange={(e) => setShiftStatusFilter(e.target.value)} className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink">
+            <option value="all">All shift statuses</option>
+            <option value="open">Open</option>
+            <option value="closed">Closed</option>
           </select>
         </div>
 
@@ -276,9 +310,7 @@ function Users() {
           {shiftsLoading ? (
             <div className="p-8 text-center text-ink-muted text-sm">Loading shifts...</div>
           ) : shiftsError ? (
-            <div className="p-8 text-center text-red-600 text-sm">
-              Failed to load staff shifts.
-            </div>
+            <div className="p-8 text-center text-red-600 text-sm">Failed to load staff shifts.</div>
           ) : filteredShifts.length === 0 ? (
             <div className="p-8 text-center text-ink-muted text-sm">No staff shifts recorded yet.</div>
           ) : (
@@ -297,33 +329,22 @@ function Users() {
                 </thead>
                 <tbody>
                   {filteredShifts.map((shift) => (
-                    <tr
-                      key={shift.shift_id}
-                      className="border-b border-border last:border-0 hover:bg-bg transition-colors"
-                    >
+                    <tr key={shift.shift_id} className="border-b border-border last:border-0 hover:bg-bg transition-colors">
                       <td className="px-6 py-3 font-medium text-ink">{shift.user_name}</td>
                       <td className="px-6 py-3 text-ink">{formatDateTime(shift.opened_at)}</td>
-                      <td className="px-6 py-3 text-ink-muted">
-                        {shift.closed_at ? formatDateTime(shift.closed_at) : "—"}
-                      </td>
-                      <td className="px-6 py-3 text-ink-muted">
-                        {formatDuration(shift.opened_at, shift.closed_at)}
-                      </td>
+                      <td className="px-6 py-3 text-ink-muted">{shift.closed_at ? formatDateTime(shift.closed_at) : "—"}</td>
+                      <td className="px-6 py-3 text-ink-muted">{formatDuration(shift.opened_at, shift.closed_at)}</td>
                       <td className="px-6 py-3">
-                        <span
-                          className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
-                            shift.status === "open"
-                              ? "bg-green-100 text-green-700 border-green-200"
-                              : "bg-gray-100 text-gray-500 border-gray-200"
-                          }`}
-                        >
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                          shift.status === "open"
+                            ? "bg-green-100 text-green-700 border-green-200"
+                            : "bg-gray-100 text-gray-500 border-gray-200"
+                        }`}>
                           {shift.status === "open" ? "Open" : "Closed"}
                         </span>
                       </td>
                       <td className="px-6 py-3 text-ink font-medium text-right">{shift.total_sales}</td>
-                      <td className="px-6 py-3 text-ink font-medium text-right">
-                        GH₵{shift.total_revenue.toFixed(2)}
-                      </td>
+                      <td className="px-6 py-3 text-ink font-medium text-right">GH₵{shift.total_revenue.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -332,6 +353,7 @@ function Users() {
           )}
         </div>
       </section>
+
       {deactivateTarget && (
         <ConfirmDialog
           title="Deactivate this user?"
@@ -340,6 +362,17 @@ function Users() {
           onConfirm={() => deactivateMutation.mutate(deactivateTarget.userId)}
           onCancel={() => setDeactivateTarget(null)}
           isPending={deactivateMutation.isPending}
+        />
+      )}
+
+      {rejectTarget && (
+        <ConfirmDialog
+          title="Reject this registration?"
+          message={`${rejectTarget.name}'s pending registration will be permanently removed. They can register again later.`}
+          confirmLabel="Reject registration"
+          onConfirm={() => rejectMutation.mutate(rejectTarget.userId)}
+          onCancel={() => setRejectTarget(null)}
+          isPending={rejectMutation.isPending}
         />
       )}
     </div>

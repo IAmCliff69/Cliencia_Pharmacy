@@ -26,3 +26,8 @@ export interface LoginResponse {
   access_token: string;
   token_type: string;
 }
+
+export interface PasswordResetRequestResponse {
+  message: string;
+  reset_token?: string;
+}

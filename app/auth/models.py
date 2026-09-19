@@ -49,3 +49,14 @@ class User(Base):
         DateTime,
         default=datetime.utcnow
     )
+
+    password_reset_token_hash = Column(
+        String(64),
+        unique=True,
+        nullable=True,
+    )
+
+    password_reset_expires_at = Column(
+        DateTime,
+        nullable=True,
+    )

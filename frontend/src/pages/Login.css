@@ -1,241 +1,441 @@
-.login-page {
-  --auth-page: var(--color-bg);
-  --auth-shell: var(--color-surface);
-  --auth-art: var(--color-bg);
-  --auth-panel: var(--color-brand);
-  --auth-copy: #c6e2dc;
-  --auth-label: #d2e8e3;
-  --auth-muted: #91b9b0;
+/* ============================================================
+   Auth pages — Login + Register
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
-html.dark .login-page {
-  --auth-page: var(--color-bg);
-  --auth-shell: var(--color-surface);
-  --auth-art: var(--color-bg);
-  --auth-panel: var(--color-brand);
-  --auth-copy: #b8d2db;
-  --auth-label: #d3e7ed;
-  --auth-muted: #91b5c2;
-}
-
-.login-page {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
   padding: 0;
-  background: var(--auth-page);
+  overflow: hidden;
+}
+
+.login-page {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  display: flex;
   font-family: "Manrope", "Trebuchet MS", sans-serif;
 }
 
+/* ── Shell ──────────────────────────────────────────── */
 .login-shell {
   width: 100%;
-  min-height: 100vh;
-  height: auto;
-  display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
+  height: 100%;
+  display: flex;
   overflow: hidden;
-  border-radius: 0;
-  background: var(--auth-shell);
-  box-shadow: 0 28px 70px rgba(27, 73, 66, 0.2);
 }
 
+/* ── LEFT: art panel ────────────────────────────────── */
 .login-art {
   position: relative;
+  flex: 1.2;
   overflow: hidden;
-  padding: 42px 48px;
-  background: var(--auth-art) url("../assets/Pharmacy Task Automation_ Daily Operations to Patient Care.jpeg") center center / cover no-repeat;
-  color: #17564d;
-}
-
-.login-art::before {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  top: -10%;
-  right: -150px;
-  width: 300px;
-  height: 116%;
-  border-radius: 50%;
-  background: var(--color-brand);
-}
-
-.login-art::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: transparent;
-}
-
-.login-brand,
-.art-caption,
-.pharmacy-cross,
-.medicine-bottle,
-.art-pills,
-.art-orbit {
-  position: absolute;
-  z-index: 1;
-}
-
-.login-brand {
-  padding: 0;
-  color: var(--color-brand-contrast);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
-}
-
-.login-brand {
-  top: 42px;
-  left: 48px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  font-size: 12px;
-  line-height: 1.15;
-  letter-spacing: 1.5px;
-}
-
-.brand-mark {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  place-items: center;
-  border: 2px solid #2e887b;
-  border-radius: 50%;
-  font-size: 23px;
-}
-
-.auth-logo {
-  width: 64px;
-  height: 64px;
-  object-fit: contain;
-}
-
-.login-brand strong { font-size: 16px; letter-spacing: 2px; }
-
-.art-orbit {
-  left: 92px;
-  top: 220px;
-  width: 335px;
-  height: 220px;
-  border: 22px solid rgba(255, 255, 255, 0.58);
-  border-radius: 50%;
-  transform: rotate(-18deg);
-}
-
-.art-orbit-two {
-  left: 138px;
-  top: 266px;
-  width: 260px;
-  height: 166px;
-  border-width: 14px;
-  border-color: rgba(122, 186, 175, 0.34);
-  transform: rotate(18deg);
-}
-
-.pharmacy-cross {
-  top: 288px;
-  left: 245px;
-  display: grid;
-  width: 92px;
-  height: 92px;
-  place-items: center;
-  border-radius: 19px;
-  background: #1f6c5f;
-  color: #e1f4ed;
-  font-size: 46px;
-  box-shadow: 10px 12px 0 rgba(21, 77, 67, 0.2);
-  transform: rotate(-11deg);
-}
-
-.medicine-bottle {
-  bottom: 168px;
-  width: 28px;
-  height: 62px;
-  border-radius: 8px 8px 12px 12px;
-  background: #ef8b79;
-  transform: rotate(15deg);
-}
-
-.medicine-bottle::before {
-  content: "";
-  position: absolute;
-  width: 18px;
-  height: 10px;
-  top: -8px;
-  left: 5px;
-  border-radius: 4px 4px 0 0;
-  background: #438777;
-}
-
-.bottle-one { left: 168px; }
-.bottle-two { left: 205px; bottom: 145px; transform: rotate(-12deg) scale(0.78); }
-
-.art-pills { left: 150px; top: 345px; width: 300px; height: 130px; }
-.art-pills i { position: absolute; width: 11px; height: 11px; border-radius: 50%; background: #f2847a; box-shadow: 0 0 0 3px rgba(255,255,255,.55); }
-.art-pills i:nth-child(1) { left: 28px; top: 35px; }
-.art-pills i:nth-child(2) { left: 74px; top: 6px; }
-.art-pills i:nth-child(3) { left: 127px; top: 51px; }
-.art-pills i:nth-child(4) { left: 186px; top: 22px; }
-.art-pills i:nth-child(5) { left: 226px; top: 72px; }
-.art-pills i:nth-child(6) { left: 105px; top: 98px; }
-
-.art-caption {
-  left: 48px;
-  bottom: 46px;
-  color: #4d8c80;
-  font-size: 15px;
-  line-height: 1.55;
-}
-
-.login-panel {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 32px 12%;
-  background: var(--auth-panel);
+  padding: 42px 48px;
+}
+
+.login-art-bg {
+  position: absolute;
+  inset: 0;
+  background: url("../assets/Pharmacy Task Automation_ Daily Operations to Patient Care.jpeg")
+    center center / cover no-repeat;
+  z-index: 0;
+}
+
+/* Subtle edge vignette only — centre stays fully clear */
+.login-art-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.22) 0%,
+    transparent 22%,
+    transparent 78%,
+    rgba(0, 0, 0, 0.22) 100%
+  );
+}
+
+/* ── Wavy boundary SVG ──────────────────────────────── */
+.login-art-wave {
+  position: absolute;
+  top: 0;
+  right: -1px;
+  width: 130px;
+  height: 100%;
+  z-index: 2;
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Light mode: match right panel */
+.login-art-wave path {
+  fill: #0a3d6b;
+}
+
+/* Dark mode: match dark right panel */
+html.dark .login-art-wave path {
+  fill: #051e38;
+}
+
+/* ── Brand / logo ───────────────────────────────────── */
+.login-brand {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  letter-spacing: 1.8px;
+  color: #fff;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7);
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.auth-logo {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.5));
+}
+
+.login-brand strong {
+  font-size: 14px;
+  letter-spacing: 2.5px;
+  display: block;
+}
+
+.art-caption {
+  position: relative;
+  z-index: 3;
+  color: #fff;
+  font-size: 15px;
+  line-height: 1.6;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7);
+}
+
+/* ── RIGHT: form panel ──────────────────────────────── */
+/* Light mode: deep navy-blue matching logo's #2FC9F4 family */
+.login-panel {
+  flex: 0.8;
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 36px 10% 28px;
+  background: #0a3d6b;
+  color: #fff;
+  overflow-y: auto;
+}
+
+/* Dark mode: even darker navy */
+html.dark .login-panel {
+  background: #051e38;
+  color: #e0f4fd;
+}
+
+.login-panel-inner {
+  width: min(340px, 100%);
+  margin: auto;
+}
+
+/* ── Headings ─────────────────────────────────────────── */
+.login-eyebrow {
+  margin: 0 0 8px;
+  color: #2fc9f4;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.login-panel h1 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(34px, 3.8vw, 52px);
+  font-weight: 400;
+  line-height: 1;
   color: #fff;
 }
 
-.login-panel-inner { width: min(360px, 100%); margin: auto; }
-.login-eyebrow { margin: 0 0 14px; color: #9dd8cc; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
-.login-panel h1 { margin: 0; font-family: Georgia, serif; font-size: clamp(42px, 5vw, 62px); font-weight: 400; line-height: 1; }
-.login-subtitle { max-width: 290px; margin: 14px 0 24px; color: var(--auth-copy); font-size: 14px; line-height: 1.5; }
-.login-form { display: grid; gap: 12px; }
-.register-name-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.login-field { display: grid; gap: 8px; }
-.login-field label { color: var(--auth-label); font-size: 12px; font-weight: 700; }
-.login-field input { width: 100%; box-sizing: border-box; border: 1px solid rgba(205, 235, 228, .28); border-radius: 10px; outline: none; padding: 14px 16px; background: rgba(4, 42, 35, .33); color: #fff; font: inherit; font-size: 13px; transition: border-color .2s, box-shadow .2s; }
-.login-field input::placeholder { color: var(--auth-muted); }
-.register-file-input { padding: 10px 12px !important; cursor: pointer; }
-.register-file-help { margin-top: -3px; color: var(--auth-muted); font-size: 10px; }
-.login-field input:focus { border-color: #8cddd0; box-shadow: 0 0 0 3px rgba(140, 221, 208, .16); }
-.login-options { display: flex; align-items: center; justify-content: space-between; margin-top: -3px; color: #a8d0c7; font-size: 11px; }
-.remember-option { display: flex; align-items: center; gap: 7px; }
-.remember-option input { accent-color: #77cdbd; }
-.forgot-link { border: 0; padding: 0; background: none; color: #a8d0c7; font: inherit; cursor: pointer; }
-.forgot-link:hover, .register-prompt a:hover { color: #fff; }
-.login-error { margin: 0; border: 1px solid rgba(255, 170, 170, .4); border-radius: 8px; padding: 10px 12px; background: rgba(151, 30, 45, .22); color: #ffd3d3; font-size: 12px; }
-.login-submit { display: flex; align-items: center; justify-content: center; gap: 18px; border: 0; border-radius: 10px; padding: 13px 18px; background: var(--color-primary); color: var(--color-brand); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; transition: transform .2s, background .2s; }
-.login-submit:hover:not(:disabled) { background: #8ae4fa; transform: translateY(-2px); }
-.login-submit:disabled { cursor: wait; opacity: .65; }
-.login-submit span { font-size: 20px; line-height: 0; }
-.register-prompt { margin: 20px 0 0; color: #a8d0c7; font-size: 12px; text-align: center; }
-.register-prompt a { color: #d1eee8; font-weight: 800; text-decoration: none; }
-.login-footer { margin: 18px 0 0; color: #86b7ad; font-size: 10px; text-align: center; }
+html.dark .login-panel h1 {
+  color: #e0f4fd;
+}
 
+.login-subtitle {
+  max-width: 300px;
+  margin: 10px 0 20px;
+  color: #93d9f0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ── Form fields ─────────────────────────────────────── */
+.login-form {
+  display: grid;
+  gap: 12px;
+}
+
+.register-name-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.login-field {
+  display: grid;
+  gap: 6px;
+}
+
+.login-field label {
+  color: #b8e8f7;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.login-field input {
+  width: 100%;
+  border: 1.5px solid rgba(47, 201, 244, 0.25);
+  border-radius: 8px;
+  outline: none;
+  padding: 11px 14px;
+  background: rgba(5, 30, 60, 0.5);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.login-field input::placeholder {
+  color: #5baac4;
+}
+
+.login-field input:focus {
+  border-color: #2fc9f4;
+  box-shadow: 0 0 0 3px rgba(47, 201, 244, 0.18);
+}
+
+.register-file-input {
+  padding: 9px 12px !important;
+  cursor: pointer;
+  color: #b8e8f7 !important;
+}
+
+.register-file-help {
+  margin-top: -2px;
+  color: #5baac4;
+  font-size: 10px;
+}
+
+/* ── Options row ─────────────────────────────────────── */
+.login-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #7ac8e0;
+  font-size: 11px;
+}
+
+.login-options-end {
+  justify-content: flex-end;
+}
+
+.forgot-link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: #7ac8e0;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.forgot-link:hover {
+  color: #fff;
+}
+
+.login-help {
+  margin: 0;
+  border: 1px solid rgba(47, 201, 244, 0.35);
+  border-radius: 8px;
+  padding: 9px 13px;
+  background: rgba(47, 201, 244, 0.12);
+  color: #b8e8f7;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* ── Error ───────────────────────────────────────────── */
+.login-error {
+  margin: 0;
+  border: 1px solid rgba(255, 160, 160, 0.35);
+  border-radius: 8px;
+  padding: 9px 13px;
+  background: rgba(150, 30, 40, 0.25);
+  color: #ffcece;
+  font-size: 12px;
+}
+
+/* ── Submit button ───────────────────────────────────── */
+.login-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 2px;
+  border: 0;
+  border-radius: 8px;
+  padding: 13px 18px;
+  background: #2fc9f4;
+  color: #04223a;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.login-submit:hover:not(:disabled) {
+  background: #5dd8f7;
+  transform: translateY(-1px);
+}
+
+.login-submit:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.login-submit span {
+  font-size: 18px;
+  line-height: 0;
+}
+
+/* ── Register prompt + footer ────────────────────────── */
+.register-prompt {
+  margin: 16px 0 0;
+  color: #7ac8e0;
+  font-size: 12px;
+  text-align: center;
+}
+
+.register-prompt a {
+  color: #b8e8f7;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.register-prompt a:hover {
+  color: #fff;
+}
+
+.login-footer {
+  margin: 12px 0 0;
+  color: #3d7a9a;
+  font-size: 10px;
+  text-align: center;
+}
+
+/* ── Mobile ──────────────────────────────────────────── */
 @media (max-width: 760px) {
-  .login-page { padding: 0; }
-  .login-shell { height: auto; min-height: 100vh; grid-template-columns: 1fr; border-radius: 0; }
-  .login-art { min-height: 265px; padding: 28px; }
-  .login-brand { top: 28px; left: 28px; }
-  .login-art::before { display: none; }
-  .art-orbit { left: 24%; top: 132px; transform: scale(.7) rotate(-18deg); transform-origin: left top; }
-  .art-orbit-two { left: 35%; top: 164px; }
-  .pharmacy-cross { top: 165px; left: 52%; transform: scale(.65) rotate(-11deg); }
-  .art-pills { left: 35%; top: 205px; transform: scale(.65); transform-origin: left top; }
-  .medicine-bottle, .art-caption { display: none; }
-  .login-panel { min-height: 490px; padding: 48px 28px 28px; }
+  html,
+  body,
+  #root {
+    overflow: auto;
+  }
+
+  .login-page {
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+  }
+
+  .login-shell {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .login-art {
+    flex: none;
+    height: 240px;
+    padding: 24px 24px 70px;
+  }
+
+  .login-art-wave {
+    top: auto;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 80px;
+  }
+
+  .login-art-wave path {
+    d: path("M0,80 C100,0 300,80 500,20 L500,80 Z");
+  }
+
+  .login-panel {
+    flex: none;
+    padding: 40px 24px 28px;
+    overflow-y: visible;
+  }
 }
 
 @media (max-width: 430px) {
-  .register-name-fields { grid-template-columns: 1fr; gap: 19px; }
+  .register-name-fields {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+.auth-simple-page {
+  min-height: 100vh;
+  width: 100vw;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #0a3d6b;
+  font-family: "Manrope", "Trebuchet MS", sans-serif;
+}
+
+.auth-simple-panel {
+  width: min(420px, 100%);
+  border-radius: 14px;
+  padding: 40px;
+  background: #0d4779;
+  color: #fff;
+  box-shadow: 0 24px 70px rgba(1, 20, 42, 0.28);
+}
+
+.auth-simple-panel h1 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 38px;
+  font-weight: 400;
+  line-height: 1.1;
+  color: #fff;
+}
+
+@media (max-width: 520px) {
+  .auth-simple-page {
+    padding: 16px;
+  }
+
+  .auth-simple-panel {
+    padding: 28px 22px;
+  }
 }

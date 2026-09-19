@@ -5,12 +5,14 @@ import { listUsers } from "../api/auth";
 import { getMedicines } from "../api/medicines";
 import type { SaleResponse } from "../types/sale";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 
 function Sales() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [selectedSale, setSelectedSale] = useState<SaleResponse | null>(null);
   const [voidTarget, setVoidTarget] = useState<SaleResponse | null>(null);
   const [voidError, setVoidError] = useState<string | null>(null);
@@ -59,11 +61,13 @@ const userMap = Object.fromEntries(
       if (selectedSale?.sale_id === updatedSale.sale_id) {
         setSelectedSale(updatedSale);
       }
+      showToast(`Sale #${updatedSale.sale_id} voided.`, "success");
     },
     onError: (err: any) => {
       setVoidError(
         err?.response?.data?.detail ?? "Failed to void sale."
       );
+      showToast(err?.response?.data?.detail ?? "Failed to void sale.", "error");
     },
   });
 

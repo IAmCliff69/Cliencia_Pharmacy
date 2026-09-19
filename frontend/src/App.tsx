@@ -12,12 +12,16 @@ import Reports from './pages/Reports'
 import Users from './pages/Users'
 import ProtectedRoute from './components/ProtectedRoute'
 import Shifts from './pages/Shifts'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 
 function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       <Route element={<AppLayout />}>
         <Route path="/dashboard" element={<Dashboard />} />

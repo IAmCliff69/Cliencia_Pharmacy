@@ -25,6 +25,7 @@ function POS() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerName, setCustomerName] = useState("");
   const [completedSale, setCompletedSale] = useState<SaleResponse | null>(null);
+  const [medicineNames, setMedicineNames] = useState<Record<number, string>>({});
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   const { data: medicines = [] } = useQuery({
@@ -37,6 +38,11 @@ function POS() {
   const checkoutMutation = useMutation({
     mutationFn: (data: SaleCreate) => createSale(data),
     onSuccess: (sale) => {
+      setMedicineNames(
+        Object.fromEntries(
+          cart.map((item) => [item.medicine.medicine_id, item.medicine.medicine_name])
+        )
+      );
       queryClient.invalidateQueries({ queryKey: ["medicines"] });
       queryClient.invalidateQueries({ queryKey: ["medicines-low-stock"] });
       queryClient.invalidateQueries({ queryKey: ["reports"] });
@@ -153,9 +159,9 @@ function POS() {
   // Receipt view after successful sale
   if (completedSale) {
     return (
-      <div className="max-w-lg mx-auto">
-        <div className="bg-surface border border-border rounded-lg p-8 text-center">
-          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+      <div className="receipt-print-area max-w-lg mx-auto">
+        <div className="receipt-card bg-surface border border-border rounded-lg p-8 text-center">
+          <div className="receipt-status w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-green-600 text-2xl">✓</span>
           </div>
           <h2 className="font-display font-bold text-xl text-ink mb-1">
@@ -175,7 +181,7 @@ function POS() {
                 className="flex justify-between text-sm"
               >
                 <span className="text-ink-muted">
-                  Medicine #{item.medicine_id} × {item.quantity}
+                  {medicineNames[item.medicine_id] ?? `Medicine #${item.medicine_id}`} × {item.quantity}
                 </span>
                 <span className="text-ink font-medium">
                   GH₵{(item.price * item.quantity).toFixed(2)}
@@ -188,7 +194,7 @@ function POS() {
             </div>
           </div>
 
-          <div className="flex justify-center gap-3">
+          <div className="receipt-actions flex justify-center gap-3">
             <button
               type="button"
               onClick={() => window.print()}

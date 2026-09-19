@@ -8,11 +8,13 @@ import {
 } from "../api/categories";
 import type { CategoryResponse, CategoryCreate } from "../types/category";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 function Categories() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<CategoryResponse | null>(null);
@@ -29,6 +31,7 @@ function Categories() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
       closeModal();
+      showToast("Category created.", "success");
     },
     onError: (err: any) => {
       setFormError(err?.response?.data?.detail ?? "Failed to create category.");
@@ -41,6 +44,7 @@ function Categories() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
       closeModal();
+      showToast("Category updated.", "success");
     },
     onError: (err: any) => {
       setFormError(err?.response?.data?.detail ?? "Failed to update category.");
@@ -52,6 +56,10 @@ function Categories() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
       setDeleteTarget(null);
+      showToast("Category deleted.", "success");
+    },
+    onError: (err: any) => {
+      showToast(err?.response?.data?.detail ?? "Failed to delete category.", "error");
     },
   });
 

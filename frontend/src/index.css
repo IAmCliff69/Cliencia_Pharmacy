@@ -25,13 +25,15 @@ body {
   background-color: var(--color-bg);
   color: var(--color-ink);
   margin: 0;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 html,
 body,
 #root {
-  min-height: 100%;
+  height: 100%;
+  max-height: 100vh;
+  overflow: hidden;
 }
 
 button,
@@ -41,6 +43,7 @@ textarea {
   font: inherit;
 }
 
+/* ── Dark mode tokens ─────────────────────────────── */
 html.dark {
   --color-bg: #102b3a;
   --color-surface: #173f50;
@@ -56,6 +59,58 @@ html.dark body {
   background-color: var(--color-bg);
 }
 
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  html,
+  body,
+  #root {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    background: white;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .receipt-print-area,
+  .receipt-print-area * {
+    visibility: visible;
+  }
+
+  .receipt-print-area {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+
+  .receipt-card {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: white !important;
+    color: black !important;
+    padding: 0 !important;
+    text-align: left !important;
+  }
+
+  .receipt-card .text-ink,
+  .receipt-card .text-ink-muted {
+    color: black !important;
+  }
+
+  .receipt-status,
+  .receipt-actions {
+    display: none !important;
+  }
+}
+
 html.dark .bg-gray-100 {
   background-color: #214b5b;
 }
@@ -66,4 +121,55 @@ html.dark .text-gray-500 {
 
 html.dark .border-gray-200 {
   border-color: var(--color-border);
+}
+
+/* ── Scrollbar: auto-hide, theme-aware ───────────────
+   Applied to the main scrollable area (overflow-y-auto
+   in AppLayout). Hidden at rest, appears on hover/scroll,
+   fades away when idle.
+   ──────────────────────────────────────────────────── */
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.3s;
+}
+
+*:hover {
+  scrollbar-color: rgba(107, 129, 139, 0.4) transparent;
+}
+
+/* Light mode — Webkit (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 99px;
+  transition: background 0.3s;
+}
+
+/* Thumb appears only when the scrollable element is hovered */
+*:hover::-webkit-scrollbar-thumb {
+  background: rgba(107, 129, 139, 0.35);
+}
+
+*:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 129, 139, 0.65);
+}
+
+/* Dark mode — thumb uses a lighter tint */
+html.dark *:hover::-webkit-scrollbar-thumb {
+  background: rgba(168, 194, 202, 0.3);
+}
+
+html.dark *:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 194, 202, 0.6);
 }

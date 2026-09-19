@@ -2,9 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getActiveShift, openShift, closeShift } from "../../api/shift";
 import { useState } from "react";
 import type { ShiftSummaryResponse } from "../../types/shift";
+import { useToast } from "../../context/ToastContext";
 
 function ShiftBar() {
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [closedSummary, setClosedSummary] = useState<ShiftSummaryResponse | null>(null);
 
   const { data: activeShift, isLoading } = useQuery({
@@ -26,6 +28,10 @@ function ShiftBar() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["active-shift"] });
       setClosedSummary(null);
+      showToast("Shift opened.", "success");
+    },
+    onError: (err: any) => {
+      showToast(err?.response?.data?.detail ?? "Failed to open shift.", "error");
     },
   });
 
@@ -36,6 +42,10 @@ function ShiftBar() {
       queryClient.invalidateQueries({ queryKey: ["my-shifts"] });
       queryClient.invalidateQueries({ queryKey: ["all-shifts"] });
       setClosedSummary(summary);
+      showToast("Shift closed.", "success");
+    },
+    onError: (err: any) => {
+      showToast(err?.response?.data?.detail ?? "Failed to close shift.", "error");
     },
   });
 
