@@ -3,6 +3,7 @@ import {
   listUsers,
   getPendingUsers,
   approveUser,
+  rejectUser,
   promoteToAdmin,
   deactivateUser,
   reactivateUser,
@@ -24,6 +25,7 @@ function Users() {
   const [shiftSearch, setShiftSearch] = useState("");
   const [shiftStatusFilter, setShiftStatusFilter] = useState("all");
   const [deactivateTarget, setDeactivateTarget] = useState<{ userId: number; name: string } | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<{ userId: number; name: string } | null>(null);
   const { showToast } = useToast();
 
   const { data: users = [], isLoading, isError } = useQuery({
@@ -50,6 +52,20 @@ function Users() {
     },
     onError: (err: any) => {
       setActionError(err?.response?.data?.detail ?? "Failed to approve user.");
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (userId: number) => rejectUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pending-users"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setRejectTarget(null);
+      setActionError(null);
+      showToast("User registration rejected.", "success");
+    },
+    onError: (err: any) => {
+      setActionError(err?.response?.data?.detail ?? "Failed to reject user.");
     },
   });
 
@@ -92,6 +108,7 @@ function Users() {
 
   const isActioning =
     approveMutation.isPending ||
+    rejectMutation.isPending ||
     promoteMutation.isPending ||
     deactivateMutation.isPending ||
     reactivateMutation.isPending;
@@ -167,6 +184,13 @@ function Users() {
                       className="text-xs font-medium text-success hover:underline disabled:opacity-50"
                     >
                       {approveMutation.isPending ? "Approving..." : "Approve"}
+                    </button>
+                    <button
+                      onClick={() => setRejectTarget({ userId: u.user_id, name: `${u.first_name} ${u.last_name}` })}
+                      disabled={isActioning}
+                      className="ml-3 text-xs font-medium text-red-600 hover:underline disabled:opacity-50"
+                    >
+                      Reject
                     </button>
                   </td>
                 </tr>
@@ -341,6 +365,17 @@ function Users() {
           onConfirm={() => deactivateMutation.mutate(deactivateTarget.userId)}
           onCancel={() => setDeactivateTarget(null)}
           isPending={deactivateMutation.isPending}
+        />
+      )}
+
+      {rejectTarget && (
+        <ConfirmDialog
+          title="Reject this registration?"
+          message={`${rejectTarget.name}'s pending account will be permanently removed and they will not be able to log in.`}
+          confirmLabel="Reject"
+          onConfirm={() => rejectMutation.mutate(rejectTarget.userId)}
+          onCancel={() => setRejectTarget(null)}
+          isPending={rejectMutation.isPending}
         />
       )}
     </div>

@@ -69,6 +69,7 @@ function POS() {
       queryClient.invalidateQueries({ queryKey: ["medicines"] });
       queryClient.invalidateQueries({ queryKey: ["medicines-low-stock"] });
       queryClient.invalidateQueries({ queryKey: ["reports"] });
+      queryClient.invalidateQueries({ queryKey: ["sales-summary-today"] });
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       setCompletedSale(sale);
       setCart([]);

@@ -26,12 +26,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // this initial check finishes.
   const [isLoading, setIsLoading] = useState(true);
 
-  // On app start, if there's a token in localStorage, try to load the
+  // On app start, if there's a token in this tab's sessionStorage, try to load the
   // current user's profile with it. If it's expired/invalid, the axios
   // 401 interceptor will already clear it and redirect — we just need
   // to handle the "no token at all" and "success" cases here.
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
+    const token = sessionStorage.getItem("access_token");
 
     if (!token) {
       setIsLoading(false);
@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (credentials: UserLogin) => {
     const { access_token } = await loginUser(credentials);
-    localStorage.setItem("access_token", access_token);
+    sessionStorage.setItem("access_token", access_token);
 
     const profile = await getMyProfile();
     setUser(profile);
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem("access_token");
+    sessionStorage.removeItem("access_token");
     setUser(null);
   };
 

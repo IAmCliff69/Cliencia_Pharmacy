@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getMedicines,
@@ -79,6 +80,7 @@ function Medicines() {
   const isAdmin = user?.role === "admin";
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState<number | undefined>();
@@ -111,6 +113,11 @@ function Medicines() {
     queryKey: ["suppliers"],
     queryFn: getSuppliers,
   });
+
+  const filterStatus = searchParams.get("status") ?? "";
+  const filteredMedicines = filterStatus
+    ? medicines.filter((medicine) => getStockStatus(medicine) === filterStatus)
+    : medicines;
 
   const createMutation = useMutation({
     mutationFn: createMedicine,
@@ -266,12 +273,29 @@ function Medicines() {
             </option>
           ))}
         </select>
-        {(search || filterCategory || filterSupplier) && (
+        <select
+          value={filterStatus}
+          onChange={(e) => {
+            const nextParams = new URLSearchParams(searchParams);
+            if (e.target.value) nextParams.set("status", e.target.value);
+            else nextParams.delete("status");
+            setSearchParams(nextParams);
+          }}
+          className="border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+        >
+          <option value="">All statuses</option>
+          <option value="expired">Expired</option>
+          <option value="expiring">Expiring soon</option>
+          <option value="low-stock">Low stock</option>
+          <option value="ok">In stock</option>
+        </select>
+        {(search || filterCategory || filterSupplier || filterStatus) && (
           <button
             onClick={() => {
               setSearch("");
               setFilterCategory(undefined);
               setFilterSupplier(undefined);
+              setSearchParams({});
             }}
             className="text-sm text-ink-muted hover:text-danger transition-colors"
           >
@@ -288,7 +312,7 @@ function Medicines() {
           <div className="p-8 text-center text-red-600 text-sm">
             Failed to load medicines. Please try again.
           </div>
-        ) : medicines.length > 0 ? (
+        ) : filteredMedicines.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -306,7 +330,7 @@ function Medicines() {
                 </tr>
               </thead>
               <tbody>
-                {medicines.map((med) => {
+                {filteredMedicines.map((med) => {
                   const status = getStockStatus(med);
                   const expiryWarning = getExpiryWarning(med.expiry_date);
                   const medId = med.medicine_id;

@@ -80,7 +80,10 @@ function Login() {
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setSessionExpired(false);
+                  }}
                   placeholder="Enter your email"
                 />
               </div>
@@ -92,16 +95,15 @@ function Login() {
                   type="password"
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setSessionExpired(false);
+                  }}
                   placeholder="Enter your password"
                 />
               </div>
 
               <div className="login-options">
-                <label className="remember-option">
-                  <input type="checkbox" />
-                  <span>Remember me</span>
-                </label>
                 <Link to="/forgot-password" className="forgot-link">
                   Forgot password?
                 </Link>

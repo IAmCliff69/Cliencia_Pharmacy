@@ -27,6 +27,8 @@ function Dashboard() {
 
   const { data: summary } = useQuery<SalesSummaryResponse>({
     queryKey: ["sales-summary-today"],
+    refetchInterval: 15000,
+    refetchIntervalInBackground: true,
     queryFn: async () => {
       const res = await api.get("/reports/sales-summary", {
         params: { start_date: today, end_date: today },
@@ -67,6 +69,7 @@ function Dashboard() {
       value: summary?.total_sales ?? "—",
       sub: "transactions today",
       accent: "border-l-primary",
+      to: "/sales",
     },
     {
       label: "Today's revenue",
@@ -74,9 +77,11 @@ function Dashboard() {
       sub: "voided sales excluded",
       accent: "border-l-success",
       valueClass: "text-success",
+      to: "/reports",
     },
     {
       label: "Low stock",
+        to: "/medicines?status=low-stock",
       value: lowStock.length,
       sub: "medicines",
       accent: "border-l-warning",
@@ -84,6 +89,7 @@ function Dashboard() {
     },
     {
       label: "Expired",
+        to: "/medicines?status=expired",
       value: expired.length,
       sub: "medicines expired",
       accent: "border-l-danger",
@@ -142,9 +148,11 @@ function Dashboard() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {statCards.map(({ label, value, sub, accent, valueClass }) => (
-          <div
+        {statCards.map(({ label, value, sub, accent, valueClass, to }) => (
+          <button
             key={label}
+            type="button"
+            onClick={() => to && navigate(to)}
             className={`rounded-lg bg-surface border border-border border-l-4 ${accent} px-5 py-4`}
           >
             <p className="text-xs text-ink-muted mb-1">{label}</p>
@@ -152,7 +160,7 @@ function Dashboard() {
               {value}
             </p>
             <p className="text-xs text-ink-muted mt-1">{sub}</p>
-          </div>
+          </button>
         ))}
       </div>
 
