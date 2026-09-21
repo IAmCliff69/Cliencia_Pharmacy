@@ -1,382 +1,217 @@
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { BarChart3, Clock3, Pill, ShoppingCart } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { getLowStockMedicines, getExpiringMedicines, getExpiredMedicines } from "../api/medicines";
-import { getSalesSummary } from "../api/reports";
-import pharmacyImage from "../assets/Pharmacy Task Automation_ Daily Operations to Patient Care.jpeg";
+import { useNavigate } from "react-router-dom";
+import { ShoppingCart, Pill, Clock3, BarChart3 } from "lucide-react";
+import api from "../api/axios";
+import type { MedicineWithStockResponse } from "../types/medicine";
+import type { SalesSummaryResponse } from "../types/report";
 
-// -----------------------------
-// Stat card
-// -----------------------------
-function StatCard({
-  label,
-  value,
-  sub,
-  color,
-  onClick,
-}: {
-  label: string;
-  value: string | number;
-  sub?: string;
-  color: "teal" | "yellow" | "red" | "green";
-  onClick?: () => void;
-}) {
-  const colors = {
-    teal: "border-l-primary bg-primary/5",
-    yellow: "border-l-yellow-400 bg-yellow-50",
-    red: "border-l-red-500 bg-red-50",
-    green: "border-l-green-500 bg-green-50",
-  };
-  const valueColors = {
-    teal: "text-primary",
-    yellow: "text-yellow-700",
-    red: "text-red-600",
-    green: "text-green-700",
-  };
+const today = new Date().toISOString().split("T")[0];
 
-  return (
-    <div
-      onClick={onClick}
-      className={`bg-surface border border-border border-l-4 rounded-lg p-5 ${colors[color]} ${
-        onClick ? "cursor-pointer hover:shadow-sm transition-shadow" : ""
-      }`}
-    >
-      <p className="text-sm text-ink-muted mb-1">{label}</p>
-      <p className={`font-display font-bold text-3xl ${valueColors[color]}`}>
-        {value}
-      </p>
-      {sub && <p className="text-xs text-ink-muted mt-1">{sub}</p>}
-    </div>
-  );
-}
+const quickLinks = [
+  { label: "Point of Sale", sub: "Record a sale", to: "/pos", icon: ShoppingCart },
+  { label: "Medicines", sub: "Manage inventory", to: "/medicines", icon: Pill },
+  { label: "Shifts", sub: "Open or review shifts", to: "/shifts", icon: Clock3 },
+  { label: "Reports", sub: "Review performance", to: "/reports", icon: BarChart3 },
+];
 
-// -----------------------------
-// Medicine alert row
-// -----------------------------
-function MedicineAlertRow({
-  name,
-  detail,
-  badge,
-  badgeColor,
-  onClick,
-}: {
-  name: string;
-  detail: string;
-  badge: string;
-  badgeColor: "yellow" | "red";
-  onClick?: () => void;
-}) {
-  const badgeStyles = {
-    yellow: "bg-yellow-100 text-yellow-700 border-yellow-200",
-    red: "bg-red-100 text-red-600 border-red-200",
-  };
-  return (
-    <li className="border-b border-border last:border-0">
-      <button type="button" onClick={onClick} className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-bg transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary">
-      <div>
-        <p className="text-sm font-medium text-ink">{name}</p>
-        <p className="text-xs text-ink-muted">{detail}</p>
-      </div>
-      <span
-        className={`text-xs font-medium px-2 py-0.5 rounded-full border ${badgeStyles[badgeColor]}`}
-      >
-        {badge}
-      </span>
-      </button>
-    </li>
-  );
-}
-
-// -----------------------------
-// Dashboard
-// -----------------------------
 function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const today = new Date().toISOString().split("T")[0];
-  const userInitials = user
-    ? `${user.first_name.charAt(0)}${user.last_name.charAt(0)}`.toUpperCase()
-    : "CP";
-  const welcomeDate = new Date().toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
+
+  const firstName = user?.first_name ?? "there";
+  const formattedDate = new Date().toLocaleDateString("en-GB", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
 
-  const { data: lowStock = [], isLoading: loadingLow } = useQuery({
-    queryKey: ["medicines-low-stock"],
-    queryFn: getLowStockMedicines,
+  const { data: summary } = useQuery<SalesSummaryResponse>({
+    queryKey: ["sales-summary-today"],
+    queryFn: async () => {
+      const res = await api.get("/reports/sales-summary", {
+        params: { start_date: today, end_date: today },
+      });
+      return res.data;
+    },
   });
 
-  const { data: expiring = [], isLoading: loadingExpiring } = useQuery({
-    queryKey: ["medicines-expiring"],
-    queryFn: () => getExpiringMedicines(30),
+  const { data: lowStock = [] } = useQuery<MedicineWithStockResponse[]>({
+    queryKey: ["low-stock"],
+    queryFn: async () => {
+      const res = await api.get("/medicines/low-stock");
+      return res.data;
+    },
   });
 
-  const { data: expired = [], isLoading: loadingExpired } = useQuery({
-    queryKey: ["medicines-expired"],
-    queryFn: getExpiredMedicines,
+  const { data: expired = [] } = useQuery<MedicineWithStockResponse[]>({
+    queryKey: ["expired"],
+    queryFn: async () => {
+      const res = await api.get("/medicines/expired");
+      return res.data;
+    },
   });
 
-  const { data: summary, isLoading: loadingSummary } = useQuery({
-    queryKey: ["reports", today, today],
-    queryFn: () =>
-      getSalesSummary({ start_date: today, end_date: today }),
+  const { data: expiringSoon = [] } = useQuery<MedicineWithStockResponse[]>({
+    queryKey: ["expiring-soon"],
+    queryFn: async () => {
+      const res = await api.get("/medicines/expiring-soon", {
+        params: { days: 30 },
+      });
+      return res.data;
+    },
   });
 
-  const isLoading =
-    loadingLow || loadingExpiring || loadingExpired || loadingSummary;
+  const statCards = [
+    {
+      label: "Today's sales",
+      value: summary?.total_sales ?? "—",
+      sub: "transactions today",
+      accent: "border-l-primary",
+    },
+    {
+      label: "Today's revenue",
+      value: summary ? `GH₵${Number(summary.total_revenue).toFixed(2)}` : "—",
+      sub: "voided sales excluded",
+      accent: "border-l-success",
+      valueClass: "text-success",
+    },
+    {
+      label: "Low stock",
+      value: lowStock.length,
+      sub: "medicines",
+      accent: "border-l-warning",
+      valueClass: lowStock.length > 0 ? "text-warning" : undefined,
+    },
+    {
+      label: "Expired",
+      value: expired.length,
+      sub: "medicines expired",
+      accent: "border-l-danger",
+      valueClass: expired.length > 0 ? "text-danger" : undefined,
+    },
+  ];
 
   return (
-    <div>
-      {/* Welcome hero */}
-      <div className="relative mb-6 min-h-[178px] overflow-hidden rounded-2xl bg-[#123b4a] shadow-sm">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: `url("${user?.profile_image_url ?? pharmacyImage}")`,
-          }}
-          aria-hidden="true"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#123b4a] via-[#123b4a]/95 to-[#123b4a]/55" />
-        <div className="relative z-10 flex min-h-[178px] items-center justify-between gap-5 px-6 py-6 sm:px-7">
-          <div className="min-w-0">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8ae4fa]">
-              {welcomeDate}
-            </p>
-            <h1 className="font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
-              Welcome back{user ? `, ${user.first_name}` : ""}!
-            </h1>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/85">
-              Here&apos;s what&apos;s happening in your pharmacy today.
-            </p>
-          </div>
-          <div className="hidden h-14 w-14 shrink-0 place-items-center rounded-full border-4 border-white/40 bg-[var(--color-brand-accent)] text-lg font-bold text-[var(--color-brand-contrast)] shadow-lg sm:grid">
-            {user?.profile_image_url ? (
-              <img src={user.profile_image_url} alt="Your profile" className="h-full w-full rounded-full object-cover" />
-            ) : (
-              userInitials
-            )}
-          </div>
+    <div className="space-y-6">
+      {/* Hero banner */}
+      <div className="relative overflow-hidden rounded-xl bg-surface border border-border px-8 py-6 flex items-center justify-between min-h-[140px]">
+        <div className="relative z-10">
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
+            {formattedDate}
+          </p>
+          <h1 className="font-display font-bold text-3xl text-ink mb-1">
+            Welcome back, {firstName}!
+          </h1>
+          <p className="text-ink-muted text-sm">
+            Here's what's happening in your pharmacy today.
+          </p>
         </div>
+        {user?.profile_image_url && (
+          <img
+            src={user.profile_image_url}
+            alt="Your profile"
+            className="h-16 w-16 rounded-full object-cover opacity-80 shrink-0"
+          />
+        )}
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[
-          { label: "Point of Sale", detail: "Record a sale", icon: ShoppingCart, to: "/pos" },
-          { label: "Medicines", detail: "Manage inventory", icon: Pill, to: "/medicines" },
-          { label: "Shifts", detail: "Open or review shifts", icon: Clock3, to: "/shifts" },
-          { label: "Reports", detail: "Review performance", icon: BarChart3, to: "/reports" },
-        ].map((action) => (
+      {/* Quick links */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {quickLinks.map(({ label, sub, to, icon: Icon }) => (
           <button
-            key={action.to}
-            type="button"
-            onClick={() => navigate(action.to)}
-            className="flex items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3 text-left transition-colors hover:border-primary hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary/40"
+            key={to}
+            onClick={() => navigate(to)}
+            className="flex items-center gap-3 rounded-lg bg-surface border border-border px-4 py-3 text-left transition-colors hover:border-primary hover:bg-primary/5"
           >
-            <action.icon size={19} className="shrink-0 text-primary" />
-            <span>
-              <span className="block text-sm font-semibold text-ink">{action.label}</span>
-              <span className="block text-xs text-ink-muted">{action.detail}</span>
-            </span>
+            <Icon size={18} className="text-primary shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-ink">{label}</p>
+              <p className="text-xs text-ink-muted">{sub}</p>
+            </div>
           </button>
         ))}
       </div>
 
-      {isLoading ? (
-        <div className="p-8 text-center text-ink-muted text-sm">
-          Loading dashboard...
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {/* Stat cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              label="Today's sales"
-              value={summary?.total_sales ?? 0}
-              sub="transactions today"
-              color="teal"
-              onClick={() => navigate("/sales")}
-            />
-            <StatCard
-              label="Today's revenue"
-              value={`GH₵${(summary?.total_revenue ?? 0).toFixed(2)}`}
-              sub="voided sales excluded"
-              color="green"
-              onClick={() => navigate("/reports")}
-            />
-            <StatCard
-              label="Low stock"
-              value={lowStock.length}
-              sub={lowStock.length === 1 ? "medicine" : "medicines"}
-              color="yellow"
-              onClick={() => navigate("/medicines")}
-            />
-            <StatCard
-              label="Expired"
-              value={expired.length}
-              sub={expired.length === 1 ? "medicine expired" : "medicines expired"}
-              color="red"
-              onClick={() => navigate("/medicines")}
-            />
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {statCards.map(({ label, value, sub, accent, valueClass }) => (
+          <div
+            key={label}
+            className={`rounded-lg bg-surface border border-border border-l-4 ${accent} px-5 py-4`}
+          >
+            <p className="text-xs text-ink-muted mb-1">{label}</p>
+            <p className={`font-display font-bold text-2xl text-ink ${valueClass ?? ""}`}>
+              {value}
+            </p>
+            <p className="text-xs text-ink-muted mt-1">{sub}</p>
           </div>
+        ))}
+      </div>
 
-          {/* Alerts row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Low stock alerts */}
-            <div className="bg-surface border border-border rounded-lg overflow-hidden">
-              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-                <h2 className="font-display font-semibold text-ink text-sm">
-                  Low stock alerts
-                </h2>
-                <span className="text-xs text-ink-muted">
-                  {lowStock.length} medicine{lowStock.length !== 1 ? "s" : ""}
-                </span>
-              </div>
-              {lowStock.length === 0 ? (
-                <div className="p-6 text-center text-ink-muted text-sm">
-                  All medicines are well stocked ✓
-                </div>
-              ) : (
-                <ul>
-                  {lowStock.slice(0, 6).map((med) => (
-                    <MedicineAlertRow
-                      key={med.medicine_id}
-                      name={med.medicine_name}
-                      detail={`Stock: ${med.inventory?.quantity_available ?? 0} / Min: ${med.inventory?.minimum_stock_level ?? 10}`}
-                      badge="Low stock"
-                      badgeColor="yellow"
-                      onClick={() => navigate("/medicines")}
-                    />
-                  ))}
-                  {lowStock.length > 6 && (
-                    <li
-                      className="px-4 py-3 text-xs text-primary hover:underline cursor-pointer"
-                      onClick={() => navigate("/medicines")}
-                    >
-                      +{lowStock.length - 6} more — view all in Medicines
-                    </li>
-                  )}
-                </ul>
-              )}
-            </div>
-
-            {/* Expiring / Expired alerts */}
-            <div className="bg-surface border border-border rounded-lg overflow-hidden">
-              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-                <h2 className="font-display font-semibold text-ink text-sm">
-                  Expiry alerts
-                </h2>
-                <span className="text-xs text-ink-muted">
-                  {expired.length} expired · {expiring.length} expiring soon
-                </span>
-              </div>
-              {expired.length === 0 && expiring.length === 0 ? (
-                <div className="p-6 text-center text-ink-muted text-sm">
-                  No expiry issues found ✓
-                </div>
-              ) : (
-                <ul>
-                  {expired.slice(0, 3).map((med) => (
-                    <MedicineAlertRow
-                      key={med.medicine_id}
-                      name={med.medicine_name}
-                      detail={`Expired: ${med.expiry_date}`}
-                      badge="Expired"
-                      badgeColor="red"
-                      onClick={() => navigate("/medicines")}
-                    />
-                  ))}
-                  {expiring.slice(0, 3).map((med) => (
-                    <MedicineAlertRow
-                      key={med.medicine_id}
-                      name={med.medicine_name}
-                      detail={`Expires: ${med.expiry_date}`}
-                      badge="Expiring soon"
-                      badgeColor="yellow"
-                      onClick={() => navigate("/medicines")}
-                    />
-                  ))}
-                  {(expired.length + expiring.length) > 6 && (
-                    <li
-                      className="px-4 py-3 text-xs text-primary hover:underline cursor-pointer"
-                      onClick={() => navigate("/medicines")}
-                    >
-                      +{(expired.length + expiring.length) - 6} more — view all in Medicines
-                    </li>
-                  )}
-                </ul>
-              )}
-            </div>
+      {/* Alert panels */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Low stock alerts */}
+        <div className="rounded-lg bg-surface border border-border overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+            <h2 className="text-sm font-semibold text-ink">Low stock alerts</h2>
+            <span className="text-xs text-ink-muted">{lowStock.length} medicines</span>
           </div>
-
-          {/* Today's top medicines */}
-          {summary && summary.top_medicines.length > 0 && (
-            <div className="bg-surface border border-border rounded-lg overflow-hidden">
-              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-                <h2 className="font-display font-semibold text-ink text-sm">
-                  Today's top medicines
-                </h2>
-                <button
-                  onClick={() => navigate("/reports")}
-                  className="text-xs text-primary hover:underline"
-                >
-                  Full report →
-                </button>
-              </div>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-bg text-left">
-                    <th className="px-4 py-2 font-medium text-ink-muted">#</th>
-                    <th className="px-4 py-2 font-medium text-ink-muted">Medicine</th>
-                    <th className="px-4 py-2 font-medium text-ink-muted text-right">
-                      Qty sold
-                    </th>
-                    <th className="px-4 py-2 font-medium text-ink-muted text-right">
-                      Revenue
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {summary.top_medicines.slice(0, 5).map((med, index) => (
-                    <tr
-                      key={med.medicine_id}
-                      className="border-b border-border last:border-0 hover:bg-bg transition-colors"
-                    >
-                      <td className="px-4 py-2 text-ink-muted">
-                        {index + 1}
-                      </td>
-                      <td className="px-4 py-2 font-medium text-ink">
-                        {med.medicine_name}
-                      </td>
-                      <td className="px-4 py-2 text-ink-muted text-right">
-                        {med.total_quantity_sold}
-                      </td>
-                      <td className="px-4 py-2 font-medium text-ink text-right">
-                        GH₵{med.total_revenue.toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* No sales today message */}
-          {summary && summary.total_sales === 0 && (
-            <div className="bg-surface border border-dashed border-border rounded-lg p-6 text-center text-ink-muted text-sm">
-              No sales recorded today yet.{" "}
-              <span
-                onClick={() => navigate("/pos")}
-                className="text-primary hover:underline cursor-pointer"
-              >
-                Go to Point of Sale →
-              </span>
-            </div>
+          {lowStock.length === 0 ? (
+            <p className="px-5 py-4 text-sm text-ink-muted">All medicines are well stocked.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {lowStock.slice(0, 6).map((m) => (
+                <li key={m.medicine_id} className="flex items-center justify-between px-5 py-2.5 text-sm">
+                  <span className="text-ink font-medium">{m.medicine_name}</span>
+                  <span className="text-warning font-semibold">
+                    {m.inventory?.quantity_available ?? 0} left
+                  </span>
+                </li>
+              ))}
+              {lowStock.length > 6 && (
+                <li className="px-5 py-2 text-xs text-ink-muted">
+                  +{lowStock.length - 6} more
+                </li>
+              )}
+            </ul>
           )}
         </div>
-      )}
+
+        {/* Expiry alerts */}
+        <div className="rounded-lg bg-surface border border-border overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+            <h2 className="text-sm font-semibold text-ink">Expiry alerts</h2>
+            <span className="text-xs text-ink-muted">
+              {expired.length} expired · {expiringSoon.length} expiring soon
+            </span>
+          </div>
+          {expired.length === 0 && expiringSoon.length === 0 ? (
+            <p className="px-5 py-4 text-sm text-ink-muted">No expiry issues at this time.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {[...expired, ...expiringSoon].slice(0, 6).map((m) => {
+                const isExpired = expired.some((e) => e.medicine_id === m.medicine_id);
+                return (
+                  <li key={m.medicine_id} className="flex items-center justify-between px-5 py-2.5 text-sm">
+                    <span className="text-ink font-medium">{m.medicine_name}</span>
+                    <span className={`font-semibold text-xs px-2 py-0.5 rounded-full border ${
+                      isExpired
+                        ? "text-danger bg-danger/10 border-danger/20"
+                        : "text-warning bg-warning/10 border-warning/20"
+                    }`}>
+                      {isExpired ? "Expired" : "Expiring soon"}
+                    </span>
+                  </li>
+                );
+              })}
+              {expired.length + expiringSoon.length > 6 && (
+                <li className="px-5 py-2 text-xs text-ink-muted">
+                  +{expired.length + expiringSoon.length - 6} more
+                </li>
+              )}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

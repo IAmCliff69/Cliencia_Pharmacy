@@ -4,7 +4,6 @@ from sqlalchemy import func
 from datetime import date, datetime, timedelta
 from models import Medicine, Category, Supplier, AuditLog, Inventory, Sale, SaleItem, Shift
 from app.auth.models import User
-from app.auth.utils import hash_password
 
 # -----------------------------
 # MEDICINE CRUD
@@ -485,21 +484,6 @@ def get_pending_users(db: Session):
     """Users who registered but have not been approved yet."""
     return db.query(User).filter(User.is_active == False).all()  # noqa: E712
 
-
-def create_user(db: Session, user_data, is_active: bool = False):
-    hashed = hash_password(user_data.password)
-    user = User(
-        first_name=user_data.first_name,
-        last_name=user_data.last_name,
-        email=user_data.email,
-        hashed_password=hashed,
-        role="staff",
-        is_active=is_active,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
 
 
 def activate_user(db: Session, user_id: int):

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import ThemeToggle from "../components/ThemeToggle";
@@ -13,10 +13,20 @@ function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  // Check if user was redirected here due to an expired session
+  useEffect(() => {
+    if (sessionStorage.getItem("session_expired") === "true") {
+      sessionStorage.removeItem("session_expired");
+      setSessionExpired(true);
+    }
+  }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSessionExpired(false);
     setIsSubmitting(true);
     try {
       await login({ email, password });
@@ -35,10 +45,8 @@ function Login() {
       <ThemeToggle />
       <section className="login-shell" aria-label="Cliencia Pharmacy login">
 
-        {/* LEFT — full-brightness photo + wavy boundary */}
         <div className="login-art" aria-hidden="true">
           <div className="login-art-bg" />
-
           <svg
             className="login-art-wave"
             viewBox="0 0 130 900"
@@ -47,7 +55,6 @@ function Login() {
           >
             <path d="M130,0 L130,900 L70,900 C70,900 10,780 50,630 C90,480 15,390 55,240 C85,120 70,0 70,0 Z" />
           </svg>
-
           <div className="login-brand">
             <img src={logo} alt="Cliencia Pharmacy" className="auth-logo" />
             <span>CLIENCIA<br /><strong>PHARMACY</strong></span>
@@ -57,7 +64,6 @@ function Login() {
           </div>
         </div>
 
-        {/* RIGHT — form panel */}
         <div className="login-panel">
           <div className="login-panel-inner">
             <p className="login-eyebrow">Welcome back</p>
@@ -91,11 +97,26 @@ function Login() {
                 />
               </div>
 
-              <div className="login-options login-options-end">
-                <button type="button" className="forgot-link" onClick={() => navigate("/forgot-password")}>
+              <div className="login-options">
+                <label className="remember-option">
+                  <input type="checkbox" />
+                  <span>Remember me</span>
+                </label>
+                <Link to="/forgot-password" className="forgot-link">
                   Forgot password?
-                </button>
+                </Link>
               </div>
+
+              {/* Session expired notice — shown above any login error */}
+              {sessionExpired && !error && (
+                <p className="login-error" role="alert" style={{
+                  background: "rgba(47, 100, 201, 0.15)",
+                  borderColor: "rgba(47, 150, 244, 0.35)",
+                  color: "#b8d8f8",
+                }}>
+                  Your session expired. Please sign in again.
+                </p>
+              )}
 
               {error && (
                 <p className="login-error" role="alert">{error}</p>
