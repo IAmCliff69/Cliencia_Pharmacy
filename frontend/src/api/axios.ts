@@ -19,13 +19,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const isLoginRequest = error.config?.url?.includes("/auth/login");
-
     if (error.response?.status === 401 && !isLoginRequest) {
       sessionStorage.removeItem("access_token");
       sessionStorage.setItem("session_expired", "true");
       window.location.href = "/login";
     }
-
     return Promise.reject(error);
   }
 );
