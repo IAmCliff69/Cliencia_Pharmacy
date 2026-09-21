@@ -9,6 +9,7 @@ import {
 import type { SupplierResponse, SupplierCreate } from "../types/supplier";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import { SkeletonTable } from "../components/Skeleton"
 
 function Suppliers() {
   const { user } = useAuth();
@@ -129,9 +130,7 @@ function Suppliers() {
 
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center text-ink-muted text-sm">
-            Loading suppliers...
-          </div>
+          <SkeletonTable rows={10} cols={5} />
         ) : isError ? (
           <div className="p-8 text-center text-danger text-sm">
             Failed to load suppliers. Please try again.

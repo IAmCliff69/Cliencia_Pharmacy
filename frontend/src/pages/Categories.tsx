@@ -9,6 +9,7 @@ import {
 import type { CategoryResponse, CategoryCreate } from "../types/category";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import { SkeletonTable } from "../components/Skeleton";
 
 function Categories() {
   const { user } = useAuth();
@@ -112,7 +113,7 @@ function Categories() {
 
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center text-ink-muted text-sm">Loading categories...</div>
+          <SkeletonTable rows={6} cols={3} />
         ) : isError ? (
           <div className="p-8 text-center text-danger text-sm">
             Failed to load categories. Please try again.

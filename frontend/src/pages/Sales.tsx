@@ -6,6 +6,7 @@ import { getMedicines } from "../api/medicines";
 import type { SaleResponse } from "../types/sale";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import { SkeletonTable } from "../components/Skeleton";
 
 
 function Sales() {
@@ -110,9 +111,7 @@ const userMap = Object.fromEntries(
         {/* Sales list */}
         <div className="bg-surface border border-border rounded-lg overflow-hidden">
           {isLoading ? (
-            <div className="p-8 text-center text-ink-muted text-sm">
-              Loading sales...
-            </div>
+            <SkeletonTable rows={6} cols={4} />
           ) : isError ? (
             <div className="p-8 text-center text-red-600 text-sm">
               Failed to load sales.

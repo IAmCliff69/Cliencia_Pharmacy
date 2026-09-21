@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getSalesSummary } from "../api/reports";
-import { downloadSalesReportPdf } from "../api/reports";
+import { getSalesSummary, downloadSalesReportPdf } from "../api/reports";
 import { Download } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { SkeletonCard } from "../components/Skeleton";
 
 const getDateString = (date: Date) => date.toISOString().split("T")[0];
 const getDateDaysAgo = (days: number) =>
@@ -109,14 +109,21 @@ function Reports() {
       <div className="mb-6">
         <h1 className="font-display font-bold text-2xl text-ink">Reports</h1>
         <p className="text-ink-muted text-sm mt-1">
-          {isAdmin ? "All staff and admin sales for the selected period." : "Your sales and top-performing medicines."}
+          {isAdmin
+            ? "All staff and admin sales for the selected period."
+            : "Your sales and top-performing medicines."}
         </p>
       </div>
 
       {/* Date range filter */}
       <div className="bg-surface border border-border rounded-lg p-4 mb-6 space-y-4">
         <div className="flex flex-wrap gap-2">
-          {[{ label: "Today", days: 0 }, { label: "Last 7 days", days: 7 }, { label: "Last 30 days", days: 30 }, { label: "All time", days: null }].map((preset) => (
+          {[
+            { label: "Today", days: 0 },
+            { label: "Last 7 days", days: 7 },
+            { label: "Last 30 days", days: 30 },
+            { label: "All time", days: null },
+          ].map((preset) => (
             <button
               key={preset.label}
               type="button"
@@ -128,46 +135,58 @@ function Reports() {
           ))}
         </div>
         <div className="flex flex-wrap gap-3 items-end">
-        <div>
-          <label className="block text-xs font-medium text-ink-muted mb-1">
-            From
-          </label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-ink-muted mb-1">
-            To
-          </label>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-          />
-        </div>
-        <button
-          onClick={handleApply}
-          className="bg-primary text-white text-sm font-medium px-4 py-2 rounded-md hover:bg-primary-dark transition-colors"
-        >
-          Apply
-        </button>
-        <button
-          onClick={handleClear}
-          className="text-sm text-ink-muted hover:text-ink transition-colors px-2 py-2"
-        >
-          Clear (all time)
-        </button>
+          <div>
+            <label className="block text-xs font-medium text-ink-muted mb-1">From</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-ink-muted mb-1">To</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+          <button
+            onClick={handleApply}
+            className="bg-primary text-white text-sm font-medium px-4 py-2 rounded-md hover:bg-primary-dark transition-colors"
+          >
+            Apply
+          </button>
+          <button
+            onClick={handleClear}
+            className="text-sm text-ink-muted hover:text-ink transition-colors px-2 py-2"
+          >
+            Clear (all time)
+          </button>
         </div>
       </div>
 
+      {/* Loading skeleton */}
       {isLoading ? (
-        <div className="p-8 text-center text-ink-muted text-sm">
-          Loading report...
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+          <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="space-y-1.5">
+                <div className="flex justify-between">
+                  <div className="h-3 w-1/3 animate-pulse rounded bg-border/60" />
+                  <div className="h-3 w-20 animate-pulse rounded bg-border/60" />
+                </div>
+                <div className="h-2 w-full animate-pulse rounded-full bg-border/60" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : isError ? (
         <div className="p-8 text-center text-red-600 text-sm">
@@ -181,12 +200,8 @@ function Reports() {
               <p className="text-xs font-medium text-ink-muted uppercase tracking-wide mb-1">
                 Total sales
               </p>
-              <p className="font-display font-bold text-3xl text-ink">
-                {data.total_sales}
-              </p>
-              <p className="text-xs text-ink-muted mt-1">
-                Completed transactions
-              </p>
+              <p className="font-display font-bold text-3xl text-ink">{data.total_sales}</p>
+              <p className="text-xs text-ink-muted mt-1">Completed transactions</p>
             </div>
 
             <div className="bg-surface border border-border rounded-lg p-5">
@@ -196,9 +211,7 @@ function Reports() {
               <p className="font-display font-bold text-3xl text-ink">
                 GH₵{data.total_revenue.toFixed(2)}
               </p>
-              <p className="text-xs text-ink-muted mt-1">
-                Voided sales excluded
-              </p>
+              <p className="text-xs text-ink-muted mt-1">Voided sales excluded</p>
             </div>
 
             <div className="bg-surface border border-border rounded-lg p-5">
@@ -211,9 +224,7 @@ function Reports() {
                   ? (data.total_revenue / data.total_sales).toFixed(2)
                   : "0.00"}
               </p>
-              <p className="text-xs text-ink-muted mt-1">
-                Revenue ÷ transactions
-              </p>
+              <p className="text-xs text-ink-muted mt-1">Revenue ÷ transactions</p>
             </div>
           </div>
 
@@ -232,22 +243,34 @@ function Reports() {
           <div className="bg-surface border border-border rounded-lg overflow-hidden">
             <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-border">
               <div>
-              <h2 className="font-display font-semibold text-ink">
-                Top medicines by revenue
-              </h2>
-              <p className="text-xs text-ink-muted mt-0.5">
-                Up to 10 best-selling medicines in the selected period
-              </p>
+                <h2 className="font-display font-semibold text-ink">
+                  Top medicines by revenue
+                </h2>
+                <p className="text-xs text-ink-muted mt-0.5">
+                  Up to 10 best-selling medicines in the selected period
+                </p>
               </div>
-              <button type="button" onClick={downloadPdf} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-medium text-ink-muted hover:border-primary hover:text-primary">
+              <button
+                type="button"
+                onClick={downloadPdf}
+                className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-medium text-ink-muted hover:border-primary hover:text-primary"
+              >
                 <Download size={14} /> Download PDF
               </button>
               {isAdmin && (
-                <button type="button" onClick={downloadTodayTotal} className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-medium text-white hover:bg-primary-dark">
+                <button
+                  type="button"
+                  onClick={downloadTodayTotal}
+                  className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-medium text-white hover:bg-primary-dark"
+                >
                   <Download size={14} /> Today&apos;s total PDF
                 </button>
               )}
-              <button type="button" onClick={exportCsv} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-medium text-ink-muted hover:border-primary hover:text-primary">
+              <button
+                type="button"
+                onClick={exportCsv}
+                className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-medium text-ink-muted hover:border-primary hover:text-primary"
+              >
                 <Download size={14} /> Export CSV
               </button>
             </div>
@@ -263,7 +286,6 @@ function Reports() {
                     maxRevenue > 0
                       ? (medicine.total_revenue / maxRevenue) * 100
                       : 0;
-
                   return (
                     <div key={medicine.medicine_id}>
                       <div className="flex items-center justify-between mb-1">

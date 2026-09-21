@@ -5,6 +5,7 @@ import { getMyShifts, getAllShifts } from "../api/shift";
 import { downloadShiftReportPdf } from "../api/reports";
 import { useToast } from "../context/ToastContext";
 import { Download } from "lucide-react";
+import { SkeletonTable } from "../components/Skeleton";
 
 function Shifts() {
   const { user } = useAuth();
@@ -86,7 +87,7 @@ function Shifts() {
 
         <div className="bg-surface border border-border rounded-lg overflow-hidden">
           {loadingMine ? (
-            <div className="p-8 text-center text-ink-muted text-sm">Loading shifts...</div>
+            <SkeletonTable rows={20} cols={6} />
           ) : filteredMyShifts.length === 0 ? (
             <div className="p-8 text-center text-ink-muted text-sm">
               No shifts yet — open your first shift from the bar at the top.

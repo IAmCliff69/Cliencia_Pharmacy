@@ -5,6 +5,7 @@ import { ShoppingCart, Pill, Clock3, BarChart3 } from "lucide-react";
 import api from "../api/axios";
 import type { MedicineWithStockResponse } from "../types/medicine";
 import type { SalesSummaryResponse } from "../types/report";
+import { SkeletonDashboard } from "../components/Skeleton";
 
 const today = new Date().toISOString().split("T")[0];
 
@@ -90,7 +91,15 @@ function Dashboard() {
     },
   ];
 
+
+  const isLoading =
+  !summary && !lowStock.length && !expired.length && !expiringSoon.length;
+
+  if (isLoading) return <SkeletonDashboard />;
+
+
   return (
+
     <div className="space-y-6">
       {/* Hero banner */}
       <div className="relative overflow-hidden rounded-xl bg-surface border border-border px-8 py-6 flex items-center justify-between min-h-[140px]">

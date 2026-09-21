@@ -3,7 +3,6 @@ import {
   listUsers,
   getPendingUsers,
   approveUser,
-  rejectUser,
   promoteToAdmin,
   deactivateUser,
   reactivateUser,
@@ -13,6 +12,7 @@ import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useToast } from "../context/ToastContext";
+import { SkeletonTable } from "../components/Skeleton";
 
 function Users() {
   const { user: currentUser } = useAuth();
@@ -24,7 +24,6 @@ function Users() {
   const [shiftSearch, setShiftSearch] = useState("");
   const [shiftStatusFilter, setShiftStatusFilter] = useState("all");
   const [deactivateTarget, setDeactivateTarget] = useState<{ userId: number; name: string } | null>(null);
-  const [rejectTarget, setRejectTarget] = useState<{ userId: number; name: string } | null>(null);
   const { showToast } = useToast();
 
   const { data: users = [], isLoading, isError } = useQuery({
@@ -51,19 +50,6 @@ function Users() {
     },
     onError: (err: any) => {
       setActionError(err?.response?.data?.detail ?? "Failed to approve user.");
-    },
-  });
-
-  const rejectMutation = useMutation({
-    mutationFn: (userId: number) => rejectUser(userId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["pending-users"] });
-      setRejectTarget(null);
-      showToast("Staff registration rejected.", "success");
-    },
-    onError: (err: any) => {
-      setActionError(err?.response?.data?.detail ?? "Failed to reject staff registration.");
-      showToast(err?.response?.data?.detail ?? "Failed to reject staff registration.", "error");
     },
   });
 
@@ -177,17 +163,10 @@ function Users() {
                   <td className="px-6 py-3">
                     <button
                       onClick={() => approveMutation.mutate(u.user_id)}
-                      disabled={isActioning || rejectMutation.isPending}
+                      disabled={isActioning}
                       className="text-xs font-medium text-success hover:underline disabled:opacity-50"
                     >
                       {approveMutation.isPending ? "Approving..." : "Approve"}
-                    </button>
-                    <button
-                      onClick={() => setRejectTarget({ userId: u.user_id, name: `${u.first_name} ${u.last_name}` })}
-                      disabled={isActioning || rejectMutation.isPending}
-                      className="ml-3 text-xs font-medium text-danger hover:underline disabled:opacity-50"
-                    >
-                      Reject
                     </button>
                   </td>
                 </tr>
@@ -219,7 +198,7 @@ function Users() {
 
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center text-ink-muted text-sm">Loading users...</div>
+          <SkeletonTable rows={6} cols={4} />
         ) : isError ? (
           <div className="p-8 text-center text-red-600 text-sm">Failed to load users.</div>
         ) : filteredUsers.length === 0 ? (
@@ -362,17 +341,6 @@ function Users() {
           onConfirm={() => deactivateMutation.mutate(deactivateTarget.userId)}
           onCancel={() => setDeactivateTarget(null)}
           isPending={deactivateMutation.isPending}
-        />
-      )}
-
-      {rejectTarget && (
-        <ConfirmDialog
-          title="Reject this registration?"
-          message={`${rejectTarget.name}'s pending registration will be permanently removed. They can register again later.`}
-          confirmLabel="Reject registration"
-          onConfirm={() => rejectMutation.mutate(rejectTarget.userId)}
-          onCancel={() => setRejectTarget(null)}
-          isPending={rejectMutation.isPending}
         />
       )}
     </div>

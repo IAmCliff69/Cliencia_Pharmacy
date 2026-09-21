@@ -15,6 +15,7 @@ import type { SupplierResponse } from "../types/supplier";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import ConfirmDialog from "../components/ConfirmDialog";
+import { SkeletonTable } from "../components/Skeleton";
 
 // -----------------------------
 // Helpers
@@ -282,9 +283,7 @@ function Medicines() {
       {/* Table */}
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center text-ink-muted text-sm">
-            Loading medicines...
-          </div>
+          <SkeletonTable rows={25} cols={46} />
         ) : isError ? (
           <div className="p-8 text-center text-red-600 text-sm">
             Failed to load medicines. Please try again.
