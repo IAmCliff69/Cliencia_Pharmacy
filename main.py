@@ -121,8 +121,9 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 # development, to make requests to this API. Without this, the browser
 # blocks the requests before they even reach FastAPI.
 origins = [
-    "http://localhost:5173",   # Vite dev server default
+    "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://clienciapharm.onrender.com",
 ]
 
 app.add_middleware(
