@@ -42,6 +42,64 @@ import crud
 # not by editing models.py alone.
 models.Base.metadata.create_all(bind=engine)
 
+def bootstrap_admin():
+    db = next(get_db())
+
+    try:
+        existing_admin = (
+            db.query(User)
+            .filter(User.role.ilike("admin"))
+            .first()
+        )
+
+        if existing_admin:
+            print("Bootstrap admin skipped: an admin already exists.")
+            return
+
+        first_name = os.getenv("BOOTSTRAP_ADMIN_FIRST_NAME")
+        last_name = os.getenv("BOOTSTRAP_ADMIN_LAST_NAME")
+        email = os.getenv("BOOTSTRAP_ADMIN_EMAIL")
+        password = os.getenv("BOOTSTRAP_ADMIN_PASSWORD")
+
+        if not all([first_name, last_name, email, password]):
+            print("Bootstrap admin skipped: environment variables are missing.")
+            return
+
+        existing_user = (
+            db.query(User)
+            .filter(User.email == email)
+            .first()
+        )
+
+        if existing_user:
+            print("Bootstrap admin skipped: the email already exists.")
+            return
+
+        admin = User(
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            password=hash_password(password),
+            role="admin",
+            is_active=True,
+        )
+
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        print(f"Bootstrap admin created successfully: {email}")
+
+    except Exception as e:
+        db.rollback()
+        print(f"Bootstrap admin failed: {e}")
+
+    finally:
+        db.close()
+
+
+bootstrap_admin()
+
 
 # -----------------------------
 # CREATE FASTAPI APP
