@@ -13,7 +13,11 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from database import engine, get_db
-
+import models
+import schemas
+import crud
+import os
+from app.auth.utils import hash_password
 
 # ✅ Import auth router
 from app.auth.routes import router as auth_router
