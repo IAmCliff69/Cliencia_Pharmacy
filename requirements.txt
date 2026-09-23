@@ -12,3 +12,4 @@ python-dotenv
 alembic
 reportlab
 pymysql
+cloudinary

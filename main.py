@@ -1,6 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.responses import StreamingResponse
-from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -51,8 +50,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-Path("uploads").mkdir(exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 # -----------------------------

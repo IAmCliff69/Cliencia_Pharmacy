@@ -1,9 +1,13 @@
+from io import BytesIO
 from pathlib import Path
 from uuid import uuid4
 
+import cloudinary
+import cloudinary.uploader
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+import os
 
 from database import get_db
 from . import schemas, service
@@ -12,12 +16,37 @@ from .models import User
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-UPLOAD_DIR = Path(__file__).resolve().parents[2] / "uploads"
 ALLOWED_IMAGE_TYPES = {
-    "image/jpeg": ".jpg",
-    "image/png": ".png",
-    "image/webp": ".webp",
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
 }
+
+# -----------------------------
+# Configure Cloudinary
+# (reads from environment variables set on Render)
+# -----------------------------
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    secure=True,
+)
+
+
+def upload_profile_image_to_cloudinary(contents: bytes, user_id: int) -> str:
+    """
+    Upload image bytes to Cloudinary and return the permanent URL.
+    The public_id ensures each user has one image slot — re-uploading
+    overwrites the old one automatically.
+    """
+    result = cloudinary.uploader.upload(
+        BytesIO(contents),
+        public_id=f"cliencia/profiles/user-{user_id}",
+        overwrite=True,
+        resource_type="image",
+    )
+    return result["secure_url"]
 
 
 # -----------------------------
@@ -68,10 +97,7 @@ async def register(
             detail="An account with this email already exists.",
         )
 
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    filename = f"profile-{new_user.user_id}-{uuid4().hex}{extension}"
-    (UPLOAD_DIR / filename).write_bytes(contents)
-    new_user.profile_image_url = f"{str(request.base_url).rstrip('/')}/uploads/{filename}"
+    new_user.profile_image_url = upload_profile_image_to_cloudinary(contents, new_user.user_id)
     db.commit()
     db.refresh(new_user)
 
@@ -169,10 +195,7 @@ async def upload_profile_image(
             detail="Profile images must be 5 MB or smaller.",
         )
 
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    filename = f"profile-{current_user.user_id}-{uuid4().hex}{extension}"
-    (UPLOAD_DIR / filename).write_bytes(contents)
-    current_user.profile_image_url = f"{str(request.base_url).rstrip('/')}/uploads/{filename}"
+    current_user.profile_image_url = upload_profile_image_to_cloudinary(contents, current_user.user_id)
     db.commit()
     db.refresh(current_user)
     return current_user
