@@ -24,6 +24,8 @@ function Categories() {
 
   const { data: categories, isLoading, isError } = useQuery({
     queryKey: ["categories"],
+    refetchInterval: 10000,
+    refetchIntervalInBackground: true,
     queryFn: getCategories,
   });
 

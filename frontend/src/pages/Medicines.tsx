@@ -96,6 +96,8 @@ function Medicines() {
 
   const { data: medicines = [], isLoading, isError } = useQuery({
     queryKey: ["medicines", search, filterCategory, filterSupplier],
+    refetchInterval: 10000,
+    refetchIntervalInBackground: true,
     queryFn: () =>
       getMedicines({
         name: search || undefined,

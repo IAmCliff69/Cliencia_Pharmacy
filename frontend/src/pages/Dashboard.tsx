@@ -27,7 +27,7 @@ function Dashboard() {
 
   const { data: summary } = useQuery<SalesSummaryResponse>({
     queryKey: ["sales-summary-today"],
-    refetchInterval: 15000,
+    refetchInterval: 10000,
     refetchIntervalInBackground: true,
     queryFn: async () => {
       const res = await api.get("/reports/sales-summary", {
@@ -39,6 +39,8 @@ function Dashboard() {
 
   const { data: lowStock = [] } = useQuery<MedicineWithStockResponse[]>({
     queryKey: ["low-stock"],
+    refetchInterval: 10000,
+    refetchIntervalInBackground: true,
     queryFn: async () => {
       const res = await api.get("/medicines/low-stock");
       return res.data;
@@ -47,6 +49,8 @@ function Dashboard() {
 
   const { data: expired = [] } = useQuery<MedicineWithStockResponse[]>({
     queryKey: ["expired"],
+    refetchInterval: 10000,
+    refetchIntervalInBackground: true,
     queryFn: async () => {
       const res = await api.get("/medicines/expired");
       return res.data;
@@ -55,6 +59,8 @@ function Dashboard() {
 
   const { data: expiringSoon = [] } = useQuery<MedicineWithStockResponse[]>({
     queryKey: ["expiring-soon"],
+    refetchInterval: 10000,
+    refetchIntervalInBackground: true,
     queryFn: async () => {
       const res = await api.get("/medicines/expiring-soon", {
         params: { days: 30 },

@@ -18,11 +18,15 @@ function Shifts() {
 
   const { data: myShifts = [], isLoading: loadingMine } = useQuery({
     queryKey: ["my-shifts"],
+    refetchInterval: 10000,
+    refetchIntervalInBackground: true,
     queryFn: getMyShifts,
   });
 
   const { data: allShifts = [], isLoading: loadingAll } = useQuery({
     queryKey: ["all-shifts"],
+    refetchInterval: 10000,
+    refetchIntervalInBackground: true,
     queryFn: getAllShifts,
     enabled: isAdmin,
   });

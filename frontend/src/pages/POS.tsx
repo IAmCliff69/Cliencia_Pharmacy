@@ -41,6 +41,8 @@ function POS() {
 
   const { data: activeShift, isLoading: shiftLoading } = useQuery({
     queryKey: ["active-shift"],
+    refetchInterval: 10000,
+    refetchIntervalInBackground: true,
     queryFn: async () => {
       try {
         return await getActiveShift();

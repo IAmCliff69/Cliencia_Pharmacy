@@ -25,6 +25,8 @@ function Suppliers() {
 
   const { data: suppliers, isLoading, isError } = useQuery({
     queryKey: ["suppliers"],
+    refetchInterval: 10000,
+    refetchIntervalInBackground: true,
     queryFn: getSuppliers,
   });
 

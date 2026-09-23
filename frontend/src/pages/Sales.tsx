@@ -23,6 +23,8 @@ function Sales() {
 
   const { data: sales = [], isLoading, isError } = useQuery({
     queryKey: ["sales"],
+    refetchInterval: 10000,
+    refetchIntervalInBackground: true,
     queryFn: getSales,
   });
 
