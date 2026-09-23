@@ -201,17 +201,6 @@ const userMap = Object.fromEntries(
                  </p>
              )}
 
-                {selectedSale.customer_name && (
-                    <p className="text-sm text-ink-muted mb-4">
-                        Customer:{" "}
-                        <span className="text-ink font-medium">
-                            {selectedSale.customer_name}
-                         </span>
-                    </p>
-                )}
-
-              
-
               <div className="space-y-2 mb-4">
                 {selectedSale.items.map((item) => (
                   <div

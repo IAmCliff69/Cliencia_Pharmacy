@@ -14,9 +14,20 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Shifts from './pages/Shifts'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
+import { useAuth } from './context/AuthContext'
 
 
 function App() {
+  const { isLoading } = useAuth()
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-bg text-ink">
+        <p className="text-sm text-ink-muted">Loading Cliencia...</p>
+      </main>
+    )
+  }
+
   return (
     <Routes>
       <Route path="/login" element={<Login />} />

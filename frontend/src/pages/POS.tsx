@@ -55,9 +55,15 @@ function POS() {
   });
 
   const { data: medicines = [] } = useQuery({
-    queryKey: ["medicines", search],
+    queryKey: [
+      "medicines",
+      search,
+      cart.map(({ medicine, quantity }) => [medicine.medicine_id, quantity]),
+    ],
     queryFn: () => getMedicines({ name: search || undefined, limit: 10 }),
     enabled: search.length > 0,
+    refetchInterval: 5000,
+    refetchIntervalInBackground: true,
   });
 
   const checkoutMutation = useMutation({
