@@ -115,9 +115,23 @@ function Medicines() {
   });
 
   const filterStatus = searchParams.get("status") ?? "";
-  const filteredMedicines = filterStatus
-    ? medicines.filter((medicine) => getStockStatus(medicine) === filterStatus)
-    : medicines;
+const filteredMedicines = filterStatus
+  ? medicines.filter((medicine) => {
+      const today = new Date();
+      const expiry = new Date(medicine.expiry_date);
+      const daysToExpiry = Math.ceil(
+        (expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      const qty = medicine.inventory?.quantity_available ?? 0;
+      const minStock = medicine.inventory?.minimum_stock_level ?? 10;
+
+      if (filterStatus === "expired") return expiry < today;
+      if (filterStatus === "expiring") return daysToExpiry > 0 && daysToExpiry <= 30;
+      if (filterStatus === "low-stock") return qty <= minStock;
+      if (filterStatus === "ok") return expiry >= today && daysToExpiry > 30 && qty > minStock;
+      return true;
+    })
+  : medicines;
 
   const createMutation = useMutation({
     mutationFn: createMedicine,
