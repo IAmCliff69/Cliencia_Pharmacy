@@ -6,6 +6,9 @@ import { downloadShiftReportPdf } from "../api/reports";
 import { useToast } from "../context/ToastContext";
 import { Download } from "lucide-react";
 import { SkeletonTable } from "../components/Skeleton";
+import Pagination from "../components/Pagination";
+
+const PAGE_SIZE = 20;
 
 function Shifts() {
   const { user } = useAuth();
@@ -13,21 +16,32 @@ function Shifts() {
   const [myStatus, setMyStatus] = useState("all");
   const [allStatus, setAllStatus] = useState("all");
   const [staffSearch, setStaffSearch] = useState("");
+  const [myPage, setMyPage] = useState(1);
+  const [allPage, setAllPage] = useState(1);
   const [downloadingShiftId, setDownloadingShiftId] = useState<number | null>(null);
   const { showToast } = useToast();
 
   const { data: myShifts = [], isLoading: loadingMine } = useQuery({
-    queryKey: ["my-shifts"],
+    queryKey: ["my-shifts", myStatus, myPage],
     refetchInterval: 10000,
     refetchIntervalInBackground: true,
-    queryFn: getMyShifts,
+    queryFn: () => getMyShifts({
+      status: myStatus === "all" ? undefined : myStatus,
+      skip: (myPage - 1) * PAGE_SIZE,
+      limit: PAGE_SIZE,
+    }),
   });
 
   const { data: allShifts = [], isLoading: loadingAll } = useQuery({
-    queryKey: ["all-shifts"],
+    queryKey: ["all-shifts", allStatus, staffSearch, allPage],
     refetchInterval: 10000,
     refetchIntervalInBackground: true,
-    queryFn: getAllShifts,
+    queryFn: () => getAllShifts({
+      status: allStatus === "all" ? undefined : allStatus,
+      staff_search: staffSearch.trim() || undefined,
+      skip: (allPage - 1) * PAGE_SIZE,
+      limit: PAGE_SIZE,
+    }),
     enabled: isAdmin,
   });
 
@@ -48,12 +62,8 @@ function Shifts() {
     return `${hours}h ${minutes}m`;
   };
 
-  const filteredMyShifts = myShifts.filter((shift) => myStatus === "all" || shift.status === myStatus);
-  const filteredAllShifts = allShifts.filter((shift) => {
-    const matchesStatus = allStatus === "all" || shift.status === allStatus;
-    const matchesStaff = !staffSearch.trim() || shift.user_name.toLowerCase().includes(staffSearch.trim().toLowerCase());
-    return matchesStatus && matchesStaff;
-  });
+  const filteredMyShifts = myShifts;
+  const filteredAllShifts = allShifts;
 
   const handleDownload = async (shiftId: number) => {
     setDownloadingShiftId(shiftId);
@@ -84,7 +94,7 @@ function Shifts() {
         </div>
 
         <div className="mb-4">
-          <select value={myStatus} onChange={(event) => setMyStatus(event.target.value)} className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink">
+            <select value={myStatus} onChange={(event) => { setMyStatus(event.target.value); setMyPage(1); }} className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink">
             <option value="all">All my shifts</option><option value="open">Open</option><option value="closed">Closed</option>
           </select>
         </div>
@@ -142,6 +152,11 @@ function Shifts() {
               </tbody>
             </table>
           )}
+          <Pagination
+            page={myPage}
+            hasNextPage={myShifts.length === PAGE_SIZE}
+            onPageChange={setMyPage}
+          />
         </div>
       </div>
 
@@ -153,10 +168,9 @@ function Shifts() {
               Every shift across all staff members, newest first.
             </p>
           </div>
-
           <div className="mb-4 flex flex-wrap gap-3">
-            <input value={staffSearch} onChange={(event) => setStaffSearch(event.target.value)} placeholder="Search staff member..." className="min-w-56 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-primary/40" />
-            <select value={allStatus} onChange={(event) => setAllStatus(event.target.value)} className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink">
+            <input value={staffSearch} onChange={(event) => { setStaffSearch(event.target.value); setAllPage(1); }} placeholder="Search staff member..." className="min-w-56 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-primary/40" />
+            <select value={allStatus} onChange={(event) => { setAllStatus(event.target.value); setAllPage(1); }} className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink">
               <option value="all">All staff shifts</option><option value="open">Open</option><option value="closed">Closed</option>
             </select>
           </div>
@@ -214,6 +228,11 @@ function Shifts() {
                 </tbody>
               </table>
             )}
+            <Pagination
+              page={allPage}
+              hasNextPage={allShifts.length === PAGE_SIZE}
+              onPageChange={setAllPage}
+            />
           </div>
         </div>
       )}

@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func
+from sqlalchemy import String, func, or_
 from datetime import date, datetime, timedelta
 from models import Medicine, Category, Supplier, AuditLog, Inventory, Sale, SaleItem, Shift
 from app.auth.models import User
@@ -156,8 +156,8 @@ def create_category(db: Session, category):
     return new_category
 
 
-def get_categories(db: Session):
-    return db.query(Category).all()
+def get_categories(db: Session, skip: int = 0, limit: int = 20):
+    return db.query(Category).order_by(Category.category_id).offset(skip).limit(limit).all()
 
 
 def update_category(db: Session, category_id: int, updated_data):
@@ -204,8 +204,17 @@ def create_supplier(db: Session, supplier):
     return new_supplier
 
 
-def get_suppliers(db: Session):
-    return db.query(Supplier).all()
+def get_suppliers(db: Session, search: str = None, skip: int = 0, limit: int = 20):
+    query = db.query(Supplier)
+    if search:
+        value = f"%{search}%"
+        query = query.filter(or_(
+            Supplier.supplier_name.ilike(value),
+            Supplier.contact_person.ilike(value),
+            Supplier.phone.ilike(value),
+            Supplier.email.ilike(value),
+        ))
+    return query.order_by(Supplier.supplier_id).offset(skip).limit(limit).all()
 
 
 def update_supplier(db: Session, supplier_id: int, updated_data):
@@ -291,7 +300,16 @@ def create_sale(db: Session, sale_data, user_id: int):
     return new_sale
 
 
-def get_sales(db: Session, user_id: int = None, start_date: date = None, end_date: date = None):
+def get_sales(
+    db: Session,
+    user_id: int = None,
+    start_date: date = None,
+    end_date: date = None,
+    search: str = None,
+    status: str = None,
+    skip: int = 0,
+    limit: int = 20,
+):
     query = db.query(Sale).options(joinedload(Sale.items))
     if user_id is not None:
         query = query.filter(Sale.user_id == user_id)
@@ -299,7 +317,14 @@ def get_sales(db: Session, user_id: int = None, start_date: date = None, end_dat
         query = query.filter(Sale.sale_date >= start_date)
     if end_date:
         query = query.filter(Sale.sale_date < end_date + timedelta(days=1))
-    return query.order_by(Sale.sale_date.desc()).all()
+    if search:
+        value = f"%{search}%"
+        query = query.filter(or_(Sale.customer_name.ilike(value), Sale.sale_id.cast(String).ilike(value)))
+    if status == "voided":
+        query = query.filter(Sale.is_voided.is_(True))
+    elif status == "completed":
+        query = query.filter(Sale.is_voided.is_(False))
+    return query.order_by(Sale.sale_date.desc()).offset(skip).limit(limit).all()
 
 
 def get_sales_for_shift(db: Session, shift: Shift):
@@ -456,12 +481,27 @@ def get_shift_summary(db: Session, shift: Shift):
     }
 
 
-def get_my_shifts(db: Session, user_id: int):
-    return db.query(Shift).filter(Shift.user_id == user_id).order_by(Shift.opened_at.desc()).all()
+def get_my_shifts(db: Session, user_id: int, status: str = None, skip: int = 0, limit: int = 20):
+    query = db.query(Shift).filter(Shift.user_id == user_id)
+    if status in {"open", "closed"}:
+        query = query.filter(Shift.status == status)
+    return query.order_by(Shift.opened_at.desc()).offset(skip).limit(limit).all()
 
 
-def get_all_shifts(db: Session):
-    return db.query(Shift).order_by(Shift.opened_at.desc()).all()
+def get_all_shifts(
+    db: Session,
+    staff_search: str = None,
+    status: str = None,
+    skip: int = 0,
+    limit: int = 20,
+):
+    query = db.query(Shift).join(User, Shift.user_id == User.user_id)
+    if staff_search:
+        value = f"%{staff_search}%"
+        query = query.filter(or_(User.first_name.ilike(value), User.last_name.ilike(value)))
+    if status in {"open", "closed"}:
+        query = query.filter(Shift.status == status)
+    return query.order_by(Shift.opened_at.desc()).offset(skip).limit(limit).all()
 
 
 # -----------------------------

@@ -40,7 +40,7 @@ function Users() {
 
   const { data: allShifts = [], isLoading: shiftsLoading, isError: shiftsError } = useQuery({
     queryKey: ["all-shifts"],
-    queryFn: getAllShifts,
+    queryFn: () => getAllShifts({ limit: 100 }),
   });
 
   const approveMutation = useMutation({

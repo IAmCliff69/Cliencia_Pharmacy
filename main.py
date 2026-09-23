@@ -277,10 +277,12 @@ def create_category(
 # ✅ READ → STAFF + ADMIN
 @app.get("/categories/", response_model=list[schemas.CategoryResponse])
 def get_categories(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user = Depends(require_staff)
 ):
-    return crud.get_categories(db)
+    return crud.get_categories(db, skip, limit)
 
 
 # 🔒 UPDATE → ADMIN ONLY
@@ -359,10 +361,13 @@ def create_supplier(
 # ✅ READ → STAFF + ADMIN
 @app.get("/suppliers/", response_model=list[schemas.SupplierResponse])
 def get_suppliers(
+    search: Optional[str] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user = Depends(require_staff)
 ):
-    return crud.get_suppliers(db)
+    return crud.get_suppliers(db, search, skip, limit)
 
 
 # 🔒 UPDATE → ADMIN ONLY
@@ -448,11 +453,26 @@ def create_sale(
 # ✅ READ → STAFF + ADMIN
 @app.get("/sales/", response_model=list[schemas.SaleResponse])
 def get_sales(
+    search: Optional[str] = None,
+    sale_status: Optional[str] = Query(None, alias="status"),
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user = Depends(require_staff)
 ):
     user_id = None if current_user.role.strip().lower() == "admin" else current_user.user_id
-    return crud.get_sales(db, user_id=user_id)
+    return crud.get_sales(
+        db,
+        user_id=user_id,
+        start_date=start_date,
+        end_date=end_date,
+        search=search,
+        status=sale_status,
+        skip=skip,
+        limit=limit,
+    )
 
 
 # ✅ READ ONE → STAFF + ADMIN
@@ -553,10 +573,13 @@ def close_shift(
 # Returns all of the current user's shifts with sales summaries.
 @app.get("/shifts/my", response_model=list[schemas.ShiftSummaryResponse])
 def get_my_shifts(
+    shift_status: Optional[str] = Query(None, alias="status"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user=Depends(require_staff)
 ):
-    shifts = crud.get_my_shifts(db, current_user.user_id)
+    shifts = crud.get_my_shifts(db, current_user.user_id, shift_status, skip, limit)
     return [crud.get_shift_summary(db, s) for s in shifts]
 
 
@@ -564,10 +587,14 @@ def get_my_shifts(
 # Admin sees every shift from every user with summaries.
 @app.get("/shifts/", response_model=list[schemas.ShiftSummaryResponse])
 def get_all_shifts(
+    staff_search: Optional[str] = None,
+    shift_status: Optional[str] = Query(None, alias="status"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user=Depends(require_admin)
 ):
-    shifts = crud.get_all_shifts(db)
+    shifts = crud.get_all_shifts(db, staff_search, shift_status, skip, limit)
     return [crud.get_shift_summary(db, s) for s in shifts]
 
 # =========================================================

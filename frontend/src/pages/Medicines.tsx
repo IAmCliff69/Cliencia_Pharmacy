@@ -17,6 +17,9 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { SkeletonTable } from "../components/Skeleton";
+import Pagination from "../components/Pagination";
+
+const PAGE_SIZE = 20;
 
 // -----------------------------
 // Helpers
@@ -85,6 +88,7 @@ function Medicines() {
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState<number | undefined>();
   const [filterSupplier, setFilterSupplier] = useState<number | undefined>();
+  const [page, setPage] = useState(1);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingMedicine, setEditingMedicine] =
     useState<MedicineWithStockResponse | null>(null);
@@ -95,7 +99,7 @@ function Medicines() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const { data: medicines = [], isLoading, isError } = useQuery({
-    queryKey: ["medicines", search, filterCategory, filterSupplier],
+    queryKey: ["medicines", search, filterCategory, filterSupplier, page],
     refetchInterval: 10000,
     refetchIntervalInBackground: true,
     queryFn: () =>
@@ -103,17 +107,19 @@ function Medicines() {
         name: search || undefined,
         category_id: filterCategory,
         supplier_id: filterSupplier,
+        skip: (page - 1) * PAGE_SIZE,
+        limit: PAGE_SIZE,
       }),
   });
 
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],
-    queryFn: getCategories,
+    queryFn: () => getCategories({ limit: 100 }),
   });
 
   const { data: suppliers = [] } = useQuery({
     queryKey: ["suppliers"],
-    queryFn: getSuppliers,
+    queryFn: () => getSuppliers({ limit: 100 }),
   });
 
   const filterStatus = searchParams.get("status") ?? "";
@@ -254,16 +260,15 @@ const filteredMedicines = filterStatus
           type="text"
           placeholder="Search by name..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           className="border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 w-56"
         />
         <select
           value={filterCategory ?? ""}
-          onChange={(e) =>
-            setFilterCategory(
-              e.target.value ? Number(e.target.value) : undefined
-            )
-          }
+          onChange={(e) => {
+            setFilterCategory(e.target.value ? Number(e.target.value) : undefined);
+            setPage(1);
+          }}
           className="border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
         >
           <option value="">All categories</option>
@@ -275,11 +280,10 @@ const filteredMedicines = filterStatus
         </select>
         <select
           value={filterSupplier ?? ""}
-          onChange={(e) =>
-            setFilterSupplier(
-              e.target.value ? Number(e.target.value) : undefined
-            )
-          }
+          onChange={(e) => {
+            setFilterSupplier(e.target.value ? Number(e.target.value) : undefined);
+            setPage(1);
+          }}
           className="border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
         >
           <option value="">All suppliers</option>
@@ -296,6 +300,7 @@ const filteredMedicines = filterStatus
             if (e.target.value) nextParams.set("status", e.target.value);
             else nextParams.delete("status");
             setSearchParams(nextParams);
+            setPage(1);
           }}
           className="border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
         >
@@ -312,6 +317,7 @@ const filteredMedicines = filterStatus
               setFilterCategory(undefined);
               setFilterSupplier(undefined);
               setSearchParams({});
+              setPage(1);
             }}
             className="text-sm text-ink-muted hover:text-danger transition-colors"
           >
@@ -437,6 +443,12 @@ const filteredMedicines = filterStatus
           </div>
         )}
       </div>
+
+      <Pagination
+        page={page}
+        hasNextPage={medicines.length === PAGE_SIZE}
+        onPageChange={setPage}
+      />
 
       {/* Modals */}
       {isFormOpen && (

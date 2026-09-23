@@ -7,6 +7,9 @@ import type { SaleResponse } from "../types/sale";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { SkeletonTable } from "../components/Skeleton";
+import Pagination from "../components/Pagination";
+
+const PAGE_SIZE = 20;
 
 
 function Sales() {
@@ -20,12 +23,20 @@ function Sales() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
+  const [page, setPage] = useState(1);
 
   const { data: sales = [], isLoading, isError } = useQuery({
-    queryKey: ["sales"],
+    queryKey: ["sales", search, statusFilter, dateFilter, page],
     refetchInterval: 10000,
     refetchIntervalInBackground: true,
-    queryFn: getSales,
+    queryFn: () => getSales({
+      search: search.trim() || undefined,
+      status: statusFilter === "all" ? undefined : statusFilter,
+      start_date: dateFilter || undefined,
+      end_date: dateFilter || undefined,
+      skip: (page - 1) * PAGE_SIZE,
+      limit: PAGE_SIZE,
+    }),
   });
 
   const { data: medicines = [] } = useQuery({
@@ -47,13 +58,7 @@ const userMap = Object.fromEntries(
   users.map((u) => [u.user_id, `${u.first_name} ${u.last_name}`])
 );
 
-  const filteredSales = sales.filter((sale) => {
-    const value = search.trim().toLowerCase();
-    const matchesSearch = !value || String(sale.sale_id).includes(value) || (sale.customer_name ?? "walk-in").toLowerCase().includes(value);
-    const matchesStatus = statusFilter === "all" || (sale.is_voided ? "voided" : "completed") === statusFilter;
-    const matchesDate = !dateFilter || sale.sale_date.startsWith(dateFilter);
-    return matchesSearch && matchesStatus && matchesDate;
-  });
+  const filteredSales = sales;
 
   const voidMutation = useMutation({
     mutationFn: (saleId: number) => voidSale(saleId),
@@ -102,9 +107,9 @@ const userMap = Object.fromEntries(
       </div>
 
       <div className="mb-4 flex flex-wrap gap-3">
-        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search sale number or customer..." className="min-w-56 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-primary/40" />
-        <input type="date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} aria-label="Filter sales by date" className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink" />
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink">
+        <input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Search sale number or customer..." className="min-w-56 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-primary/40" />
+        <input type="date" value={dateFilter} onChange={(event) => { setDateFilter(event.target.value); setPage(1); }} aria-label="Filter sales by date" className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink" />
+        <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }} className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink">
           <option value="all">All statuses</option><option value="completed">Completed</option><option value="voided">Voided</option>
         </select>
       </div>
@@ -161,6 +166,11 @@ const userMap = Object.fromEntries(
               ))}
             </ul>
           )}
+          <Pagination
+            page={page}
+            hasNextPage={sales.length === PAGE_SIZE}
+            onPageChange={setPage}
+          />
         </div>
 
         {/* Sale detail */}

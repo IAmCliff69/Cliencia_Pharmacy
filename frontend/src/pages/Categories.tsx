@@ -10,6 +10,9 @@ import type { CategoryResponse, CategoryCreate } from "../types/category";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { SkeletonTable } from "../components/Skeleton";
+import Pagination from "../components/Pagination";
+
+const PAGE_SIZE = 20;
 
 function Categories() {
   const { user } = useAuth();
@@ -21,12 +24,13 @@ function Categories() {
   const [editingCategory, setEditingCategory] = useState<CategoryResponse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CategoryResponse | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const { data: categories, isLoading, isError } = useQuery({
-    queryKey: ["categories"],
+    queryKey: ["categories", page],
     refetchInterval: 10000,
     refetchIntervalInBackground: true,
-    queryFn: getCategories,
+    queryFn: () => getCategories({ skip: (page - 1) * PAGE_SIZE, limit: PAGE_SIZE }),
   });
 
   const createMutation = useMutation({
@@ -165,6 +169,12 @@ function Categories() {
           </div>
         )}
       </div>
+
+      <Pagination
+        page={page}
+        hasNextPage={(categories?.length ?? 0) === PAGE_SIZE}
+        onPageChange={setPage}
+      />
 
       {isModalOpen && (
         <CategoryModal

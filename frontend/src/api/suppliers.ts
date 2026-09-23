@@ -1,8 +1,8 @@
 import api from "./axios";
 import type { SupplierResponse, SupplierCreate } from "../types/supplier";
 
-export const getSuppliers = async (): Promise<SupplierResponse[]> => {
-  const response = await api.get<SupplierResponse[]>("/suppliers/");
+export const getSuppliers = async (params?: { search?: string; skip?: number; limit?: number }): Promise<SupplierResponse[]> => {
+  const response = await api.get<SupplierResponse[]>("/suppliers/", { params });
   return response.data;
 };
 

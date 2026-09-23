@@ -6,8 +6,15 @@ export const createSale = async (data: SaleCreate): Promise<SaleResponse> => {
   return response.data;
 };
 
-export const getSales = async (): Promise<SaleResponse[]> => {
-  const response = await api.get<SaleResponse[]>("/sales/");
+export const getSales = async (params?: {
+  search?: string;
+  status?: string;
+  start_date?: string;
+  end_date?: string;
+  skip?: number;
+  limit?: number;
+}): Promise<SaleResponse[]> => {
+  const response = await api.get<SaleResponse[]>("/sales/", { params });
   return response.data;
 };
 

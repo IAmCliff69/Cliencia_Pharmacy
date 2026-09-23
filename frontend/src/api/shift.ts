@@ -16,12 +16,12 @@ export const closeShift = async (): Promise<ShiftSummaryResponse> => {
   return response.data;
 };
 
-export const getMyShifts = async (): Promise<ShiftSummaryResponse[]> => {
-  const response = await api.get<ShiftSummaryResponse[]>("/shifts/my");
+export const getMyShifts = async (params?: { status?: string; skip?: number; limit?: number }): Promise<ShiftSummaryResponse[]> => {
+  const response = await api.get<ShiftSummaryResponse[]>("/shifts/my", { params });
   return response.data;
 };
 
-export const getAllShifts = async (): Promise<ShiftSummaryResponse[]> => {
-  const response = await api.get<ShiftSummaryResponse[]>("/shifts/");
+export const getAllShifts = async (params?: { staff_search?: string; status?: string; skip?: number; limit?: number }): Promise<ShiftSummaryResponse[]> => {
+  const response = await api.get<ShiftSummaryResponse[]>("/shifts/", { params });
   return response.data;
 };

@@ -10,6 +10,9 @@ import type { SupplierResponse, SupplierCreate } from "../types/supplier";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { SkeletonTable } from "../components/Skeleton"
+import Pagination from "../components/Pagination";
+
+const PAGE_SIZE = 20;
 
 function Suppliers() {
   const { user } = useAuth();
@@ -21,13 +24,18 @@ function Suppliers() {
   const [deleteTarget, setDeleteTarget] = useState<SupplierResponse | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const { showToast } = useToast();
 
   const { data: suppliers, isLoading, isError } = useQuery({
-    queryKey: ["suppliers"],
+    queryKey: ["suppliers", search, page],
     refetchInterval: 10000,
     refetchIntervalInBackground: true,
-    queryFn: getSuppliers,
+    queryFn: () => getSuppliers({
+      search: search.trim() || undefined,
+      skip: (page - 1) * PAGE_SIZE,
+      limit: PAGE_SIZE,
+    }),
   });
 
   const createMutation = useMutation({
@@ -94,13 +102,7 @@ function Suppliers() {
   };
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
-  const filteredSuppliers = (suppliers ?? []).filter((supplier) => {
-    const value = search.trim().toLowerCase();
-    return !value || [supplier.supplier_name, supplier.contact_person, supplier.phone, supplier.email]
-      .join(" ")
-      .toLowerCase()
-      .includes(value);
-  });
+  const filteredSuppliers = suppliers ?? [];
 
   return (
     <div>
@@ -124,7 +126,7 @@ function Suppliers() {
       <div className="mb-4">
         <input
           value={search}
-          onChange={(event) => setSearch(event.target.value)}
+          onChange={(event) => { setSearch(event.target.value); setPage(1); }}
           placeholder="Search suppliers, contacts, phone, or email..."
           className="w-full max-w-xl rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-primary/40"
         />
@@ -196,7 +198,12 @@ function Suppliers() {
             {isAdmin && " Click \"Add supplier\" to create your first one."}
           </div>
         )}
-      </div>
+          </div>
+          <Pagination
+            page={page}
+            hasNextPage={filteredSuppliers.length === PAGE_SIZE}
+            onPageChange={setPage}
+          />
 
       {isModalOpen && (
         <SupplierModal
