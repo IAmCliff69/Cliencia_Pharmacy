@@ -6,7 +6,7 @@ import logo from "../assets/Logo.svg";
 import "./Login.css";
 
 function Login() {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -14,6 +14,13 @@ function Login() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
+
+  // Redirect already-logged-in users away from the login page
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, navigate]);
 
   // Check if user was redirected here due to an expired session
   useEffect(() => {
@@ -109,7 +116,6 @@ function Login() {
                 </Link>
               </div>
 
-              {/* Session expired notice — shown above any login error */}
               {sessionExpired && !error && (
                 <p className="login-error" role="alert" style={{
                   background: "rgba(47, 100, 201, 0.15)",
