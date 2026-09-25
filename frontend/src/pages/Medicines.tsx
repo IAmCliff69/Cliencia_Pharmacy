@@ -7,6 +7,7 @@ import {
   updateMedicine,
   deleteMedicine,
   adjustStock as adjustStockApi,
+  getMedicine,
 } from "../api/medicines";
 import { getCategories } from "../api/categories";
 import { getSuppliers } from "../api/suppliers";
@@ -84,6 +85,7 @@ function Medicines() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
+  const selectedMedicineId = Number(searchParams.get("medicine_id")) || undefined;
 
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState<number | undefined>();
@@ -99,11 +101,12 @@ function Medicines() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const { data: medicines = [], isLoading, isError } = useQuery({
-    queryKey: ["medicines", search, filterCategory, filterSupplier, page],
+    queryKey: ["medicines", search, filterCategory, filterSupplier, page, selectedMedicineId],
     refetchInterval: 10000,
     refetchIntervalInBackground: true,
-    queryFn: () =>
-      getMedicines({
+    queryFn: () => selectedMedicineId
+      ? getMedicine(selectedMedicineId).then((medicine) => [medicine])
+      : getMedicines({
         name: search || undefined,
         category_id: filterCategory,
         supplier_id: filterSupplier,
@@ -123,7 +126,9 @@ function Medicines() {
   });
 
   const filterStatus = searchParams.get("status") ?? "";
-const filteredMedicines = filterStatus
+  const filteredMedicines = selectedMedicineId
+    ? medicines
+    : filterStatus
   ? medicines.filter((medicine) => {
       const today = new Date();
       const expiry = new Date(medicine.expiry_date);
@@ -259,8 +264,16 @@ const filteredMedicines = filterStatus
         <input
           type="text"
           placeholder="Search by name..."
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          value={selectedMedicineId ? medicines[0]?.medicine_name ?? "" : search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+            if (selectedMedicineId) {
+              const nextParams = new URLSearchParams(searchParams);
+              nextParams.delete("medicine_id");
+              setSearchParams(nextParams);
+            }
+          }}
           className="border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 w-56"
         />
         <select
@@ -310,7 +323,7 @@ const filteredMedicines = filterStatus
           <option value="low-stock">Low stock</option>
           <option value="ok">In stock</option>
         </select>
-        {(search || filterCategory || filterSupplier || filterStatus) && (
+        {(search || filterCategory || filterSupplier || filterStatus || selectedMedicineId) && (
           <button
             onClick={() => {
               setSearch("");

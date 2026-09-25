@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -6,8 +7,10 @@ import api from "../api/axios";
 import type { MedicineWithStockResponse } from "../types/medicine";
 import type { SalesSummaryResponse } from "../types/report";
 import { SkeletonDashboard } from "../components/Skeleton";
+import { getMedicines } from "../api/medicines";
 
 const today = new Date().toISOString().split("T")[0];
+const StockPieChart = lazy(() => import("../components/StockPieChart"));
 
 const quickLinks = [
   { label: "Point of Sale", sub: "Record a sale", to: "/pos", icon: ShoppingCart },
@@ -66,6 +69,27 @@ function Dashboard() {
         params: { days: 30 },
       });
       return res.data;
+    },
+  });
+
+  const {
+    data: inventory = [],
+    isLoading: isInventoryLoading,
+    isError: isInventoryError,
+  } = useQuery({
+    queryKey: ["dashboard-medicines"],
+    refetchInterval: 10000,
+    refetchIntervalInBackground: true,
+    queryFn: async () => {
+      const allMedicines: MedicineWithStockResponse[] = [];
+      let skip = 0;
+      let page: MedicineWithStockResponse[];
+      do {
+        page = await getMedicines({ skip, limit: 100 });
+        allMedicines.push(...page);
+        skip += page.length;
+      } while (page.length === 100);
+      return allMedicines;
     },
   });
 
@@ -169,6 +193,15 @@ function Dashboard() {
           </button>
         ))}
       </div>
+
+      <Suspense fallback={<div className="h-100 animate-pulse rounded-lg border border-border bg-surface" />}>
+        <StockPieChart
+          medicines={inventory}
+          isLoading={isInventoryLoading}
+          isError={isInventoryError}
+          onSelectMedicine={(medicineId) => navigate(`/medicines?medicine_id=${medicineId}`)}
+        />
+      </Suspense>
 
       {/* Alert panels */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
