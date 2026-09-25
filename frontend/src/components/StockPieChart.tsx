@@ -27,10 +27,6 @@ function StockPieChart({ medicines, isLoading, isError, onSelectMedicine }: Stoc
     selectRef.current = onSelectMedicine;
   }, [onSelectMedicine]);
 
-  const totalUnits = medicines.reduce(
-    (total, medicine) => total + (medicine.inventory?.quantity_available ?? 0),
-    0,
-  );
   const stockedMedicines = medicines.filter(
     (medicine) => (medicine.inventory?.quantity_available ?? 0) > 0,
   );
@@ -198,78 +194,33 @@ function StockPieChart({ medicines, isLoading, isError, onSelectMedicine }: Stoc
   }, [medicines]);
 
   return (
-    <section className="overflow-hidden rounded-lg border border-border bg-surface">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
-        <div>
-          <h2 className="text-sm font-semibold text-ink">Medicine stock</h2>
-          <p className="mt-0.5 text-xs text-ink-muted">Available units across the inventory</p>
-        </div>
-        <div className="flex gap-5 text-right">
-          <div>
-            <p className="font-display text-xl font-bold text-ink">{medicines.length}</p>
-            <p className="text-xs text-ink-muted">medicines</p>
-          </div>
-          <div>
-            <p className="font-display text-xl font-bold text-ink">{totalUnits.toLocaleString()}</p>
-            <p className="text-xs text-ink-muted">units in stock</p>
-          </div>
-        </div>
-      </div>
-
-      {isLoading ? (
-        <div className="flex h-64 items-center justify-center text-sm text-ink-muted">Loading inventory...</div>
-      ) : isError ? (
-        <div className="flex h-64 items-center justify-center text-sm text-danger">Could not load medicine stock.</div>
-      ) : medicines.length === 0 ? (
-        <div className="flex h-64 items-center justify-center text-sm text-ink-muted">No medicines in the inventory yet.</div>
-      ) : (
-        <div className="grid min-w-0 grid-cols-1 md:grid-cols-[minmax(0,1.2fr)_minmax(16rem,0.8fr)]">
-          <div ref={hostRef} className="relative h-64 min-w-0 sm:h-72">
-            {stockedMedicines.length === 0 ? (
-              <p className="absolute inset-0 flex items-center justify-center text-sm text-ink-muted">
-                All medicines currently have zero available stock.
-              </p>
-            ) : (
-              <>
-                {hovered && (
-                  <div
-                    className="pointer-events-none absolute z-10 max-w-52 rounded-md border border-border bg-surface px-3 py-2 text-xs shadow-lg"
-                    style={{ left: Math.min(hovered.x + 12, 220), top: Math.max(hovered.y - 48, 4) }}
-                  >
-                    <p className="font-semibold text-ink">{hovered.medicine.medicine_name}</p>
-                    <p className="text-ink-muted">
-                      {hovered.medicine.inventory?.quantity_available ?? 0} units
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-          <div className="max-h-72 overflow-y-auto border-t border-border p-3 md:border-l md:border-t-0">
-            {medicines.map((medicine, index) => (
-              <button
-                key={medicine.medicine_id}
-                type="button"
-                onClick={() => onSelectMedicine(medicine.medicine_id)}
-                className="flex w-full items-center justify-between gap-3 rounded px-2.5 py-2 text-left transition-colors hover:bg-bg focus-visible:outline-2 focus-visible:outline-primary"
-              >
-                <span className="flex min-w-0 items-center gap-2.5">
-                  <span
-                    aria-hidden="true"
-                    className="h-2.5 w-2.5 shrink-0 rounded-sm"
-                    style={{ backgroundColor: colors[index % colors.length] }}
-                  />
-                  <span className="truncate text-sm text-ink">{medicine.medicine_name}</span>
-                </span>
-                <span className="shrink-0 text-xs tabular-nums text-ink-muted">
-                  {(medicine.inventory?.quantity_available ?? 0).toLocaleString()} units
-                </span>
-              </button>
-            ))}
-          </div>
+    <div className="relative h-80 w-full sm:h-96">
+      <div ref={hostRef} className="absolute inset-0" />
+      {(isLoading || isError || medicines.length === 0 || stockedMedicines.length === 0) && (
+        <p className={`absolute inset-0 flex items-center justify-center text-sm ${
+          isError ? "text-danger" : "text-ink-muted"
+        }`}>
+          {isLoading
+            ? "Loading medicine stock..."
+            : isError
+              ? "Could not load medicine stock."
+              : medicines.length === 0
+                ? "No medicines in the inventory yet."
+                : "All medicines currently have zero available stock."}
+        </p>
+      )}
+      {hovered && !isLoading && !isError && (
+        <div
+          className="pointer-events-none absolute z-10 max-w-52 rounded-md border border-border bg-surface px-3 py-2 text-xs shadow-lg"
+          style={{ left: Math.min(hovered.x + 12, 220), top: Math.max(hovered.y - 48, 4) }}
+        >
+          <p className="font-semibold text-ink">{hovered.medicine.medicine_name}</p>
+          <p className="text-ink-muted">
+            {hovered.medicine.inventory?.quantity_available ?? 0} units
+          </p>
         </div>
       )}
-    </section>
+    </div>
   );
 }
 

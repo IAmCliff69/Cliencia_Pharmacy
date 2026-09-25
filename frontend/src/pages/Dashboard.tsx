@@ -194,15 +194,6 @@ function Dashboard() {
         ))}
       </div>
 
-      <Suspense fallback={<div className="h-100 animate-pulse rounded-lg border border-border bg-surface" />}>
-        <StockPieChart
-          medicines={inventory}
-          isLoading={isInventoryLoading}
-          isError={isInventoryError}
-          onSelectMedicine={(medicineId) => navigate(`/medicines?medicine_id=${medicineId}`)}
-        />
-      </Suspense>
-
       {/* Alert panels */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Low stock alerts */}
@@ -268,6 +259,15 @@ function Dashboard() {
           )}
         </div>
       </div>
+
+      <Suspense fallback={<div className="h-80 animate-pulse sm:h-96" />}>
+        <StockPieChart
+          medicines={inventory}
+          isLoading={isInventoryLoading}
+          isError={isInventoryError}
+          onSelectMedicine={(medicineId) => navigate(`/medicines?medicine_id=${medicineId}`)}
+        />
+      </Suspense>
     </div>
   );
 }
